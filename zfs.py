@@ -19,7 +19,10 @@ class Filesystem:
   name: str
 
   def __init__(self, name: str) -> None:
-    name = name
+    self.name = name
+
+  def __repr__(self):
+    return f'Filesystem(name={self.name})'
 
 
 def run_zfs_command(cmd: list[str]) -> str:
