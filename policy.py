@@ -6,6 +6,7 @@ import random
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from zfs import Snapshot
+from argparse import Namespace
 
 
 class ParseError(Exception):

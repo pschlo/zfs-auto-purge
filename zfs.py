@@ -12,7 +12,7 @@ class Snapshot:
     self.timestamp = datetime.fromtimestamp(creation)
       
   def __repr__(self):
-    return f'Snapshot(name={self.name}, timestamp={self.timestamp.strftime("%Y-%m-%d %H:%M:%S")})'
+    return f'Snapshot(name="{self.name}", timestamp={self.timestamp.strftime("%Y-%m-%d %H:%M:%S")})'
 
 
 class Filesystem:
@@ -22,7 +22,7 @@ class Filesystem:
     self.name = name
 
   def __repr__(self):
-    return f'Filesystem(name={self.name})'
+    return f'Filesystem(name="{self.name}")'
 
 
 def run_zfs_command(cmd: list[str]) -> str:
