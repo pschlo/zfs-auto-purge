@@ -11,8 +11,9 @@ def print_snap(snap: Snapshot):
 def purge_snaps(policy: ExpirePolicy, dry_run: bool, dataset: Optional[str] = None, match_name: Optional[Pattern] = None) -> None:
   snaps = get_snapshots(dataset, match_name=match_name)
   if not snaps:
-    print(f'Could not find any snapshots, nothing to do')
+    print(f'Did not find any snapshots, nothing to do')
     return
+  print(f'Found {len(snaps)} snapshots')
   
   print(f'Applying policy {policy}')
   keep, destroy = apply_policy(snaps, policy)
