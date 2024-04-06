@@ -1,24 +1,28 @@
 from policy import apply_policy, ExpirePolicy
-from zfs import Snapshot, get_snapshots, destroy_dataset
+from zfs import Snapshot, get_snapshots, destroy_snapshot
 from typing import Optional
+from re import Pattern
 
 
 def print_snap(snap: Snapshot):
-  print(f'    {snap.timestamp}  {snap.name}')
+  print(f'    {snap.timestamp}  {snap.full_name}')
 
 
-def purge_snaps(policy: ExpirePolicy, dry_run: bool, dataset: Optional[str] = None):
-  snaps = get_snapshots(dataset)
+def purge_snaps(policy: ExpirePolicy, dry_run: bool, dataset: Optional[str] = None, match_name: Optional[Pattern] = None) -> None:
+  snaps = get_snapshots(dataset, match_name=match_name)
+  if not snaps:
+    print(f'Could not find any snapshots, nothing to do')
+    return
   
   print(f'Applying policy {policy}')
-  keep, remove = apply_policy(snaps, policy)
+  keep, destroy = apply_policy(snaps, policy)
 
   print(f'Keeping {len(keep)} snapshots')
   for snap in sorted(keep, key=lambda x: x.timestamp, reverse=True):
     print_snap(snap)
 
-  print(f'Destroying {len(remove)} snapshots')
-  for snap in sorted(remove, key=lambda x: x.timestamp, reverse=True):
+  print(f'Destroying {len(destroy)} snapshots')
+  for snap in sorted(destroy, key=lambda x: x.timestamp, reverse=True):
     print_snap(snap)
 
   if not keep:
@@ -28,5 +32,5 @@ def purge_snaps(policy: ExpirePolicy, dry_run: bool, dataset: Optional[str] = No
     return
 
   print(f'Purging snapshots')
-  for snap in remove:
-    destroy_dataset(snap.name)
+  for snap in destroy:
+    destroy_snapshot(snap)

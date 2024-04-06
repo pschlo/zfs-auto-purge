@@ -96,13 +96,13 @@ def year_bucket(date: datetime) -> int:
 
 
 """
-Returns tuple (keep, remove)
+Returns tuple (keep, destroy)
 """
 def apply_policy(snapshots: Collection[Snapshot], policy: ExpirePolicy) -> tuple[set[Snapshot], set[Snapshot]]:
   # all snapshots, sorted from latest to oldest
   snaps = sorted(snapshots, key=lambda x: x.timestamp, reverse=True)
   keep: set[Snapshot] = set()
-  remove: set[Snapshot] = set()
+  destroy: set[Snapshot] = set()
   
   buckets: list[Bucket] = [
     Bucket(policy.last, unique_bucket, -1),
@@ -149,6 +149,6 @@ def apply_policy(snapshots: Collection[Snapshot], policy: ExpirePolicy) -> tuple
     if keep_snap:
       keep.add(snap)
     else:
-      remove.add(snap)
+      destroy.add(snap)
 
-  return keep, remove
+  return keep, destroy

@@ -3,16 +3,18 @@ from datetime import datetime
 import subprocess
 from typing import Optional
 from dataclasses import dataclass
+from re import Pattern
 
 
 @dataclass(eq=True, frozen=True)
 class Snapshot:
-  name: str
+  dataset: str
+  short_name: str
   timestamp: datetime
 
-@dataclass(eq=True, frozen=True)
-class Filesystem:
-  name: str
+  @property
+  def full_name(self):
+    return f'{self.dataset}@{self.short_name}'
 
 
 def run_zfs_command(cmd: list[str]) -> str:
@@ -25,7 +27,7 @@ def run_zfs_command(cmd: list[str]) -> str:
   return r.stdout.strip()
 
 
-def get_snapshots(dataset: Optional[str] = None) -> set[Snapshot]:
+def get_snapshots(dataset: Optional[str] = None, match_name: Optional[Pattern] = None) -> set[Snapshot]:
   cmd = ['list', '-H', '-t', 'snapshot', '-p', '-o', 'name,creation']
   if dataset:
     cmd.append(dataset)
@@ -34,26 +36,19 @@ def get_snapshots(dataset: Optional[str] = None) -> set[Snapshot]:
 
   for line in lines:
     fields = line.split('\t')
+
+    _dataset, _short_name = fields[0].split('@')
     snap = Snapshot(
-      name = fields[0],
+      dataset = _dataset,
+      short_name = _short_name,
       timestamp = datetime.fromtimestamp(int(fields[1]))
     )
-    assert '@' in snap.name
-    snapshots.add(snap)
+
+    if match_name is None or match_name.match(snap.short_name):
+      snapshots.add(snap)
 
   return snapshots
 
-def destroy_dataset(dataset: str) -> None:
-  run_zfs_command(['destroy', dataset])
 
-def get_filesystems() -> set[Filesystem]:
-  lines = run_zfs_command(['list', '-H', '-t', 'filesystem']).splitlines()
-  filesystems: set[Filesystem] = set()
-
-  for line in lines:
-    fields = line.split('\t')
-    filesystems.add(Filesystem(
-      name = fields[0]
-    ))
-
-  return filesystems
+def destroy_snapshot(snapshot: Snapshot) -> None:
+  run_zfs_command(['destroy', snapshot.full_name])

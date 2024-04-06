@@ -2,6 +2,7 @@ from __future__ import annotations
 import argparse
 from dateutil.relativedelta import relativedelta
 from policy import parse_duration
+import re
 
 
 COUNT_OPTS = [
@@ -33,5 +34,6 @@ def get_args():
 
   parser.add_argument('--dry-run', action='store_true')
   parser.add_argument('--dataset', type=str, metavar="DATASET", default=None)
+  parser.add_argument('--match-name', type=re.compile, metavar="REGEX", default=None)
 
   return parser.parse_args()
