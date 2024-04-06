@@ -27,8 +27,10 @@ def run_zfs_command(cmd: list[str]) -> str:
   return r.stdout.strip()
 
 
-def get_snapshots(dataset: Optional[str] = None, match_name: Optional[Pattern] = None) -> set[Snapshot]:
+def get_snapshots(dataset: Optional[str] = None, recursive: bool = False, match_name: Optional[Pattern] = None) -> set[Snapshot]:
   cmd = ['list', '-H', '-t', 'snapshot', '-p', '-o', 'name,creation']
+  if recursive:
+    cmd.append('-r')
   if dataset:
     cmd.append(dataset)
   lines = run_zfs_command(cmd).splitlines()

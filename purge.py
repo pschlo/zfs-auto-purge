@@ -8,8 +8,16 @@ def print_snap(snap: Snapshot):
   print(f'    {snap.timestamp}  {snap.full_name}')
 
 
-def purge_snaps(policy: ExpirePolicy, dry_run: bool, dataset: Optional[str] = None, match_name: Optional[Pattern] = None) -> None:
-  snaps = get_snapshots(dataset, match_name=match_name)
+def purge_snaps(
+  policy: ExpirePolicy,
+  *,
+  dry_run: bool = True,
+  dataset: Optional[str] = None,
+  recursive: bool = False,
+  match_name: Optional[Pattern] = None
+) -> None:
+  
+  snaps = get_snapshots(dataset, match_name=match_name, recursive=recursive)
   if not snaps:
     print(f'Did not find any snapshots, nothing to do')
     return
