@@ -4,9 +4,10 @@ from collections.abc import Collection
 from dataclasses import dataclass
 import random
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
-from zfs import Snapshot
 from argparse import Namespace
+from dateutil.relativedelta import relativedelta
+
+from .zfs import Snapshot
 
 
 class ParseError(Exception):

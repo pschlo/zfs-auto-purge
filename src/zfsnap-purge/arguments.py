@@ -1,8 +1,9 @@
 from __future__ import annotations
 import argparse
 from dateutil.relativedelta import relativedelta
-from policy import parse_duration
 import re
+
+from .policy import parse_duration
 
 
 COUNT_OPTS = [

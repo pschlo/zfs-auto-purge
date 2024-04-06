@@ -1,7 +1,8 @@
-from policy import apply_policy, ExpirePolicy
-from zfs import Snapshot, get_snapshots, destroy_snapshot
 from typing import Optional
 from re import Pattern
+
+from .zfs import Snapshot, get_snapshots, destroy_snapshot
+from .policy import apply_policy, ExpirePolicy
 
 
 def print_snap(snap: Snapshot):

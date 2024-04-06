@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
-from arguments import get_args
-from policy import ExpirePolicy
-from purge import purge_snaps
+
+from .arguments import get_args
+from .policy import ExpirePolicy
+from .purge import purge_snaps
 
 
 args = get_args()
