@@ -4,15 +4,15 @@ import subprocess
 
 
 class Snapshot:
-    name: str
-    timestamp: datetime
+  name: str
+  timestamp: datetime
 
-    def __init__(self, name: str, creation: int):
-        self.name = name
-        self.timestamp = datetime.fromtimestamp(creation)
-        
-    def __repr__(self):
-        return f'Snapshot(name={self.name}, timestamp={self.timestamp.strftime("%Y-%m-%d %H:%M:%S")})'
+  def __init__(self, name: str, creation: int):
+    self.name = name
+    self.timestamp = datetime.fromtimestamp(creation)
+      
+  def __repr__(self):
+    return f'Snapshot(name={self.name}, timestamp={self.timestamp.strftime("%Y-%m-%d %H:%M:%S")})'
 
 
 class Filesystem:
