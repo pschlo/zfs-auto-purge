@@ -31,4 +31,6 @@ def get_args():
   for opt in WITHIN_OPTS:
     parser.add_argument(opt, type=parse_duration, metavar="DURATION", default=relativedelta())
 
+  parser.add_argument('--dry-run', action='store_true')
+
   return parser.parse_args()

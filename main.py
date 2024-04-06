@@ -24,4 +24,4 @@ policy = ExpirePolicy(
   within_yearly = args.keep_within_yearly
 )
 
-purge_snaps(policy)
+purge_snaps(policy, dry_run=args.dry_run)

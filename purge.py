@@ -6,7 +6,7 @@ def print_snap(snap: Snapshot):
   print(f'    {snap.timestamp}  {snap.name}')
 
 
-def purge_snaps(policy: ExpirePolicy):
+def purge_snaps(policy: ExpirePolicy, dry_run: bool):
   snaps = get_snapshots()
   
   print(f'Applying policy')
@@ -24,6 +24,7 @@ def purge_snaps(policy: ExpirePolicy):
   if not keep:
     raise RuntimeError(f"Refusing to destroy all snapshots")
 
-  print(f'Purging snapshots')
-  pass
-  
+  if not dry_run:
+    print(f'Purging snapshots')
+    pass
+    
