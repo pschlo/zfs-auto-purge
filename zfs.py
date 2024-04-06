@@ -2,28 +2,17 @@ from __future__ import annotations
 from datetime import datetime
 import subprocess
 from typing import Optional
+from dataclasses import dataclass
 
 
+@dataclass(eq=True, frozen=True)
 class Snapshot:
   name: str
   timestamp: datetime
 
-  def __init__(self, name: str, creation: int):
-    self.name = name
-    self.timestamp = datetime.fromtimestamp(creation)
-      
-  def __repr__(self):
-    return f'Snapshot(name="{self.name}", timestamp={self.timestamp.strftime("%Y-%m-%d %H:%M:%S")})'
-
-
+@dataclass(eq=True, frozen=True)
 class Filesystem:
   name: str
-
-  def __init__(self, name: str) -> None:
-    self.name = name
-
-  def __repr__(self):
-    return f'Filesystem(name="{self.name}")'
 
 
 def run_zfs_command(cmd: list[str]) -> str:
@@ -47,7 +36,7 @@ def get_snapshots(dataset: Optional[str] = None) -> set[Snapshot]:
     fields = line.split('\t')
     snapshots.add(Snapshot(
       name = fields[0],
-      creation = int(fields[1])
+      timestamp = datetime.fromtimestamp(int(fields[1]))
     ))
 
   return snapshots

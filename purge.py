@@ -10,7 +10,7 @@ def print_snap(snap: Snapshot):
 def purge_snaps(policy: ExpirePolicy, dry_run: bool, dataset: Optional[str] = None):
   snaps = get_snapshots(dataset)
   
-  print(f'Applying policy')
+  print(f'Applying policy {policy}')
   keep, remove = apply_policy(snaps, policy)
 
   print(f'Keeping {len(keep)} snapshots')
