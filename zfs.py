@@ -34,10 +34,12 @@ def get_snapshots(dataset: Optional[str] = None) -> set[Snapshot]:
 
   for line in lines:
     fields = line.split('\t')
-    snapshots.add(Snapshot(
+    snap = Snapshot(
       name = fields[0],
       timestamp = datetime.fromtimestamp(int(fields[1]))
-    ))
+    )
+    assert '@' in snap.name
+    snapshots.add(snap)
 
   return snapshots
 
