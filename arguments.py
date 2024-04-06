@@ -35,6 +35,6 @@ def get_args():
   parser.add_argument('--dry-run', action='store_true')
   parser.add_argument('--dataset', type=str, metavar="DATASET", default=None)
   parser.add_argument('--match-name', type=re.compile, metavar="REGEX", default=None)
-  parser.add_argument('--recursive', action='store_true')
+  parser.add_argument('-r', '--recursive', action='store_true')
 
   return parser.parse_args()
