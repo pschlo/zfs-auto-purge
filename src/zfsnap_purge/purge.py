@@ -1,5 +1,4 @@
 from typing import Optional
-from re import Pattern
 
 from .zfs import Snapshot, get_snapshots, destroy_snapshots
 from .policy import apply_policy, ExpirePolicy
@@ -15,10 +14,9 @@ def purge_snaps(
   dry_run: bool = True,
   dataset: Optional[str] = None,
   recursive: bool = False,
-  match_name: Optional[Pattern] = None
 ) -> None:
   
-  snaps = get_snapshots(dataset, match_name=match_name, recursive=recursive)
+  snaps = get_snapshots(dataset, recursive=recursive)
   if not snaps:
     print(f'Did not find any snapshots, nothing to do')
     return

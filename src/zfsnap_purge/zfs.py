@@ -4,7 +4,6 @@ import subprocess
 from typing import Optional
 from collections.abc import Collection
 from dataclasses import dataclass
-from re import Pattern
 
 
 @dataclass(eq=True, frozen=True)
@@ -28,7 +27,7 @@ def run_zfs_command(cmd: list[str]) -> str:
   return r.stdout.strip()
 
 
-def get_snapshots(dataset: Optional[str] = None, recursive: bool = False, match_name: Optional[Pattern] = None) -> set[Snapshot]:
+def get_snapshots(dataset: Optional[str] = None, recursive: bool = False) -> set[Snapshot]:
   cmd = ['list', '-H', '-t', 'snapshot', '-p', '-o', 'name,creation']
   if recursive:
     cmd.append('-r')
@@ -39,16 +38,13 @@ def get_snapshots(dataset: Optional[str] = None, recursive: bool = False, match_
 
   for line in lines:
     fields = line.split('\t')
-
     _dataset, _short_name = fields[0].split('@')
     snap = Snapshot(
       dataset = _dataset,
       short_name = _short_name,
       timestamp = datetime.fromtimestamp(int(fields[1]))
     )
-
-    if match_name is None or match_name.match(snap.short_name):
-      snapshots.add(snap)
+    snapshots.add(snap)
 
   return snapshots
 

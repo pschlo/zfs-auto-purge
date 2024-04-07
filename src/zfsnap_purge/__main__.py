@@ -22,7 +22,9 @@ policy = ExpirePolicy(
   within_daily = args.keep_within_daily,
   within_weekly = args.keep_within_weekly,
   within_monthly = args.keep_within_monthly,
-  within_yearly = args.keep_within_yearly
+  within_yearly = args.keep_within_yearly,
+
+  name = args.keep_name
 )
 
-purge_snaps(policy, dry_run=args.dry_run, dataset=args.dataset, match_name=args.match_name, recursive=args.recursive)
+purge_snaps(policy, dry_run=args.dry_run, dataset=args.dataset, recursive=args.recursive)

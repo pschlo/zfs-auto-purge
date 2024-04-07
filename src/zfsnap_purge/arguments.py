@@ -27,15 +27,16 @@ WITHIN_OPTS = [
 def get_args():
   parser = argparse.ArgumentParser("simple_example")
 
+  # policy arguments
+  parser.add_argument('--keep-name', type=re.compile, metavar="REGEX", default=None)
   for opt in COUNT_OPTS:
     parser.add_argument(opt, type=int, metavar="N", default=0)
-
   for opt in WITHIN_OPTS:
     parser.add_argument(opt, type=parse_duration, metavar="DURATION", default=relativedelta())
 
+  # other arguments
   parser.add_argument('--dry-run', action='store_true')
   parser.add_argument('--dataset', type=str, metavar="DATASET", default=None)
-  parser.add_argument('--match-name', type=re.compile, metavar="REGEX", default=None)
   parser.add_argument('-r', '--recursive', action='store_true')
 
   return parser.parse_args()

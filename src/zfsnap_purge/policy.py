@@ -1,11 +1,11 @@
 from __future__ import annotations
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 from collections.abc import Collection
 from dataclasses import dataclass
 import random
 from datetime import datetime
-from argparse import Namespace
 from dateutil.relativedelta import relativedelta
+import re
 
 from .zfs import Snapshot
 
@@ -75,6 +75,8 @@ class ExpirePolicy:
   within_monthly: relativedelta = relativedelta()
   within_yearly: relativedelta = relativedelta()
 
+  name: Optional[re.Pattern] = None
+
 
 def unique_bucket(_: datetime) -> int:
   return random.getrandbits(128)
@@ -127,6 +129,11 @@ def apply_policy(snapshots: Collection[Snapshot], policy: ExpirePolicy) -> tuple
   for snap in snaps:
     keep_snap = False
 
+    # keep matching name
+    if policy.name is not None and policy.name.match(snap.short_name):
+      keep_snap = True
+
+    # keep count-based
     for bucket in buckets:
       if bucket.count == 0:
         continue
@@ -137,6 +144,7 @@ def apply_policy(snapshots: Collection[Snapshot], policy: ExpirePolicy) -> tuple
         if bucket.count > 0:
           bucket.count -= 1
 
+    # keep duration-based
     now = datetime.now()
     for bucket in bucketsWithin:
       if snap.timestamp <= now - bucket.within:
