@@ -1,7 +1,7 @@
 from typing import Optional
 from re import Pattern
 
-from .zfs import Snapshot, get_snapshots, destroy_snapshot
+from .zfs import Snapshot, get_snapshots, destroy_snapshots
 from .policy import apply_policy, ExpirePolicy
 
 
@@ -42,5 +42,4 @@ def purge_snaps(
     return
 
   print(f'Purging snapshots')
-  for snap in destroy:
-    destroy_snapshot(snap)
+  destroy_snapshots(destroy)

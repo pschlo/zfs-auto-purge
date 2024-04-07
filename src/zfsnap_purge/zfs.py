@@ -2,6 +2,7 @@ from __future__ import annotations
 from datetime import datetime
 import subprocess
 from typing import Optional
+from collections.abc import Collection
 from dataclasses import dataclass
 from re import Pattern
 
@@ -52,5 +53,15 @@ def get_snapshots(dataset: Optional[str] = None, recursive: bool = False, match_
   return snapshots
 
 
-def destroy_snapshot(snapshot: Snapshot) -> None:
-  run_zfs_command(['destroy', snapshot.full_name])
+def destroy_snapshots(snapshots: Collection[Snapshot]) -> None:
+  # group snapshots by dataset
+  _map: dict[str, set[Snapshot]] = dict()
+  for snap in snapshots:
+    if snap.dataset not in _map:
+      _map[snap.dataset] = set()
+    _map[snap.dataset].add(snap)
+
+  # run one command per dataset
+  for dataset, snaps in _map.items():
+    short_names = ','.join(map(lambda s: s.short_name, snaps))
+    run_zfs_command(['destroy', f'{dataset}@{short_names}'])
