@@ -35,8 +35,8 @@ def get_args():
     parser.add_argument(opt, type=parse_duration, metavar="DURATION", default=relativedelta())
 
   # other arguments
-  parser.add_argument('--dry-run', action='store_true')
-  parser.add_argument('--dataset', type=str, metavar="DATASET", default=None)
+  parser.add_argument('-n', '--dry-run', action='store_true')
+  parser.add_argument('-d', '--dataset', type=str, metavar="DATASET", default=None)
   parser.add_argument('-r', '--recursive', action='store_true')
 
   return parser.parse_args()
