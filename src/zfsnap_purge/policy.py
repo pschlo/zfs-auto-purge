@@ -116,7 +116,7 @@ def apply_policy(snapshots: Collection[Snapshot], policy: ExpirePolicy) -> tuple
     Bucket(policy.yearly, year_bucket, -1)
   ]
 
-  bucketsWithin: list[BucketWithin] = [
+  buckets_within: list[BucketWithin] = [
     BucketWithin(policy.within, unique_bucket, -1),
     BucketWithin(policy.within_hourly, hour_bucket, -1),
     BucketWithin(policy.within_daily, day_bucket, -1),
@@ -146,7 +146,7 @@ def apply_policy(snapshots: Collection[Snapshot], policy: ExpirePolicy) -> tuple
 
     # keep duration-based
     now = datetime.now()
-    for bucket in bucketsWithin:
+    for bucket in buckets_within:
       if snap.timestamp <= now - bucket.within:
         # snap too old
         continue
