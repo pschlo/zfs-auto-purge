@@ -41,5 +41,9 @@ def purge_snaps(
   if dry_run:
     return
 
+  if not destroy:
+    print("No snapshots to purge")
+    return
+
   print(f'Purging snapshots')
   destroy_snapshots(destroy)
