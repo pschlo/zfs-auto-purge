@@ -15,6 +15,11 @@ class Snapshot:
   @property
   def full_name(self):
     return f'{self.dataset}@{self.short_name}'
+  
+
+
+# def run_ssh_command(cmd: list[str], host: str, user: Optional[str], port: Optional[str]) -> str:
+#   r = subprocess.run(['ssh', *cmd], capture_output=True)
 
 
 def run_zfs_command(cmd: list[str]) -> str:
@@ -27,8 +32,19 @@ def run_zfs_command(cmd: list[str]) -> str:
   return r.stdout.strip()
 
 
+def create_snapshot(dataset: str, short_name: str) -> Snapshot:
+  full_name = f'{dataset}@{short_name}'
+  run_zfs_command(['snapshot', full_name])
+  timestamp = run_zfs_command(['get', '-Hp', '-o', 'value', 'creation', full_name])
+  return Snapshot(
+    dataset=dataset,
+    short_name=short_name,
+    timestamp=datetime.fromtimestamp(int(timestamp))
+  )
+
+
 def get_snapshots(dataset: Optional[str] = None, recursive: bool = False) -> set[Snapshot]:
-  cmd = ['list', '-H', '-t', 'snapshot', '-p', '-o', 'name,creation']
+  cmd = ['list', '-Hp', '-t', 'snapshot', '-o', 'name,creation']
   if recursive:
     cmd.append('-r')
   if dataset:

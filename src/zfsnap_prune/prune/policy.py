@@ -7,7 +7,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import re
 
-from .zfs import Snapshot
+from ..zfs import Snapshot
 
 
 class ParseError(Exception):

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from .zfs import Snapshot, get_snapshots, destroy_snapshots
+from ..zfs import Snapshot, get_snapshots, destroy_snapshots
 from .policy import apply_policy, ExpirePolicy
 
 
@@ -8,7 +8,7 @@ def print_snap(snap: Snapshot):
   print(f'    {snap.timestamp}  {snap.full_name}')
 
 
-def purge_snaps(
+def prune_snapshots(
   policy: ExpirePolicy,
   *,
   dry_run: bool = True,
@@ -40,8 +40,8 @@ def purge_snaps(
     return
 
   if not destroy:
-    print("No snapshots to purge")
+    print("No snapshots to prune")
     return
 
-  print(f'Purging snapshots')
+  print(f'Pruning snapshots')
   destroy_snapshots(destroy)
