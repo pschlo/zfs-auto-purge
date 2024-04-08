@@ -25,7 +25,7 @@ WITHIN_OPTS = [
 ]
 
 def get_args():
-  parser = argparse.ArgumentParser("simple_example")
+  parser = argparse.ArgumentParser("zfsnap_prune")
 
   # policy arguments
   parser.add_argument('--keep-name', type=re.compile, metavar="REGEX", default=None)

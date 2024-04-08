@@ -3,12 +3,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "zfsnap-purge"
+name = "zfsnap-prune"
 version = "1.0.1"
 authors = [
   { name="pschlo", email="author@example.com" },
 ]
-description = "Policy-based ZFS snapshot purging"
+description = "Policy-based ZFS snapshot pruning"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
@@ -18,6 +18,6 @@ dependencies = [
 
 [tool.hatch.build.targets.sdist]
 # choose here what to include in sdist
-# the wheel will only include src/zfsnap-purge anyway
+# the wheel will only include src/zfsnap-prune anyway
 # see https://discuss.python.org/t/should-sdists-include-docs-and-tests/14578
 # include = [ ]
