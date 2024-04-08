@@ -3,7 +3,6 @@
 from __future__ import annotations
 from argparse import Namespace
 
-from .arguments import get_args
 from .policy import ExpirePolicy
 from .prune import prune_snapshots
 
