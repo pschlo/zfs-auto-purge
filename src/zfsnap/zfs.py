@@ -52,8 +52,7 @@ class ZfsCli:
   
 
   def rename_snapshot(self, snapshot: Snapshot, new_short_name: str) -> Snapshot:
-    new_full_name = f'{snapshot.dataset}@{new_short_name}'
-    self._run_command(['rename', snapshot.full_name, new_full_name])
+    self._run_command(['rename', snapshot.full_name, f'@{new_short_name}'])
     return Snapshot(
       dataset=snapshot.dataset,
       short_name=new_short_name,
@@ -62,10 +61,17 @@ class ZfsCli:
     )
 
 
-  def create_snapshot(self, dataset: str, short_name: str) -> Snapshot:
+  def create_snapshot(self, dataset: str, short_name: str, recursive: bool = False) -> Snapshot:
     full_name = f'{dataset}@{short_name}'
-    self._run_command(['snapshot', full_name])
+    
+    # take snapshot
+    cmd = ['snapshot']
+    if recursive:
+      cmd += ['-r']
+    cmd += [full_name]
+    self._run_command(cmd)
 
+    # fetch infos and return Snapshot object
     cmd = ['get', '-Hp', '-o', 'value', 'creation,guid', full_name]
     timestamp, guid = self._run_command(cmd).splitlines()
     return Snapshot(
@@ -79,9 +85,9 @@ class ZfsCli:
   def get_snapshots(self, dataset: Optional[str] = None, recursive: bool = False) -> set[Snapshot]:
     cmd = ['list', '-Hp', '-t', 'snapshot', '-o', 'name,creation,guid']
     if recursive:
-      cmd.append('-r')
+      cmd += ['-r']
     if dataset:
-      cmd.append(dataset)
+      cmd += [dataset]
     lines = self._run_command(cmd).splitlines()
     snapshots: set[Snapshot] = set()
 

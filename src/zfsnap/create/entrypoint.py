@@ -10,10 +10,11 @@ def entrypoint(args: Namespace) -> None:
   if not args.dataset:
     raise ValueError(f"No dataset provided")
   dataset: str = args.dataset
+  recursive: bool = args.recursive
   snapname: str = args.snapname or to_hex(random.getrandbits(64), 16)
 
   print(f'Creating snapshot of "{dataset}"')
-  snap = LocalZfsCli().create_snapshot(dataset=dataset, short_name=snapname)
+  snap = LocalZfsCli().create_snapshot(dataset=dataset, short_name=snapname, recursive=recursive)
 
 
 def to_hex(num: int, digits: int) -> str:
