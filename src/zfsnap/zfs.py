@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 import subprocess
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, CompletedProcess, CalledProcessError
 from typing import Optional, IO
 from collections.abc import Collection
 from dataclasses import dataclass
@@ -18,62 +18,78 @@ class Snapshot:
   def full_name(self):
     return f'{self.dataset}@{self.short_name}'
   
+  def with_dataset(self, dataset: str) -> Snapshot:
+    return Snapshot(
+      dataset=dataset,
+      short_name=self.short_name,
+      timestamp=self.timestamp,
+      guid=self.guid
+    )
+
+
+@dataclass(eq=True, frozen=True)
+class Pool:
+  name: str
+  guid: int
+
 
 class ZfsCli:
-  base_cmd: list[str]
-
-  def __init__(self, base_cmd: list[str]) -> None:
-    self.base_cmd = base_cmd
+  def run_text_command(self, cmd: list[str]) -> str:
+    p: Popen[str] = self.start_command(cmd, stdout=PIPE, stderr=PIPE, text=True)
+    stdout, stderr = p.communicate()
+    if p.returncode > 0:
+      print(f'ERROR: {stderr.strip()}')
+      raise CalledProcessError(p.returncode, cmd=p.args, output=stdout, stderr=stderr)
+    return stdout.strip()
   
-
-  # def run_ssh_command(cmd: list[str], host: str, user: Optional[str], port: Optional[str]) -> str:
-  #   r = subprocess.run(['ssh', *cmd], capture_output=True)
-
-
-  def _run_command(self, cmd: list[str]) -> str:
-    r = subprocess.run([*self.base_cmd, *cmd], capture_output=True, text=True)
-    try:
-      r.check_returncode()
-    except subprocess.CalledProcessError:
-      print(f'ERROR: {r.stderr.strip()}')
-      raise
-    return r.stdout.strip()
+  def start_command(self, cmd: list[str], stdin=None, stdout=None, stderr=None, text=False) -> Popen:
+    return Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr, text=text)
   
   def send_snapshot_async(self, snapshot: Snapshot, base: Optional[Snapshot] = None) -> Popen[bytes]:
-    cmd = [*self.base_cmd, 'send']
+    cmd = ['zfs', 'send']
     if base is not None:
       cmd += ['-I', base.full_name]
     cmd += [snapshot.full_name]
-    return Popen(cmd, stdout=PIPE)
+    return self.start_command(cmd, stdout=PIPE)
   
   def receive_snapshot_async(self, dataset: str, stdin: IO[bytes]) -> Popen[bytes]:
-    cmd = [*self.base_cmd, 'receive', dataset]
-    return Popen(cmd, stdin=stdin)
+    cmd = ['zfs', 'receive', dataset]
+    return self.start_command(cmd, stdin=stdin)
   
 
   def rename_snapshot(self, snapshot: Snapshot, new_short_name: str) -> Snapshot:
-    self._run_command(['rename', snapshot.full_name, f'@{new_short_name}'])
+    self.run_text_command(['zfs', 'rename', snapshot.full_name, f'@{new_short_name}'])
     return Snapshot(
       dataset=snapshot.dataset,
       short_name=new_short_name,
       timestamp=snapshot.timestamp,
       guid=snapshot.guid
     )
+  
+  def hold_snapshot(self, snapshot: Snapshot, tag: str) -> None:
+    self.run_text_command(['zfs', 'hold', tag, snapshot.full_name])
 
+  def release_snapshot(self, snapshot: Snapshot, tag: str) -> None:
+    self.run_text_command(['zfs', 'release', tag, snapshot.full_name])
+
+  def get_pool_from_dataset(self, dataset: str) -> Pool:
+    name = dataset.split('/')[0]
+    guid = self.run_text_command(['zpool', 'get', '-Hp', '-o', 'value', 'guid', name])
+    return Pool(name=name, guid=int(guid))
 
   def create_snapshot(self, dataset: str, short_name: str, recursive: bool = False) -> Snapshot:
     full_name = f'{dataset}@{short_name}'
     
     # take snapshot
-    cmd = ['snapshot']
+    cmd = ['zfs', 'snapshot']
     if recursive:
       cmd += ['-r']
     cmd += [full_name]
-    self._run_command(cmd)
+    self.run_text_command(cmd)
 
     # fetch infos and return Snapshot object
-    cmd = ['get', '-Hp', '-o', 'value', 'creation,guid', full_name]
-    timestamp, guid = self._run_command(cmd).splitlines()
+    cmd = ['zfs', 'get', '-Hp', '-o', 'value', 'creation,guid', full_name]
+    timestamp, guid = self.run_text_command(cmd).splitlines()
     return Snapshot(
       dataset=dataset,
       short_name=short_name,
@@ -83,12 +99,12 @@ class ZfsCli:
 
 
   def get_snapshots(self, dataset: Optional[str] = None, recursive: bool = False) -> set[Snapshot]:
-    cmd = ['list', '-Hp', '-t', 'snapshot', '-o', 'name,creation,guid']
+    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', 'name,creation,guid']
     if recursive:
       cmd += ['-r']
     if dataset:
       cmd += [dataset]
-    lines = self._run_command(cmd).splitlines()
+    lines = self.run_text_command(cmd).splitlines()
     snapshots: set[Snapshot] = set()
 
     for line in lines:
@@ -116,22 +132,28 @@ class ZfsCli:
     # run one command per dataset
     for dataset, snaps in _map.items():
       short_names = ','.join(map(lambda s: s.short_name, snaps))
-      self._run_command(['destroy', f'{dataset}@{short_names}'])
+      self.run_text_command(['zfs', 'destroy', f'{dataset}@{short_names}'])
 
 
 
 class LocalZfsCli(ZfsCli):
-  def __init__(self) -> None:
-    super().__init__(['zfs'])
+  pass
 
 
 class RemoteZfsCli(ZfsCli):
+  ssh_command: list[str]
+
   def __init__(self, host: str, user: Optional[str], port: Optional[int]) -> None:
+    super().__init__()
+
     cmd = ['ssh']
     if user is not None:
       cmd += ['-l', user]
     if port is not None:
       cmd += ['-p', str(port)]
-    cmd += [host, 'zfs']
+    cmd += [host]
+    self.ssh_command = cmd
 
-    super().__init__(cmd)
+  def start_command(self, cmd: list[str], stdin=None, stdout=None, stderr=None, text=False) -> Popen:
+    cmd = self.ssh_command + cmd
+    return super().start_command(cmd, stdin, stdout, stderr, text)
