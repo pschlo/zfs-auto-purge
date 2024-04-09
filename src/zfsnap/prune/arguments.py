@@ -1,5 +1,4 @@
 from __future__ import annotations
-import argparse
 from dateutil.relativedelta import relativedelta
 import re
 from argparse import ArgumentParser
