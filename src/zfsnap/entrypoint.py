@@ -4,7 +4,7 @@ from .arguments import get_args
 from . import (
   prune as _prune,
   create as _create,
-  fetch as _fetch
+  pull as _pull
 )
 
 
@@ -17,7 +17,7 @@ def entrypoint() -> None:
     _prune.entrypoint(args)
   elif subcommand == 'create':
     _create.entrypoint(args)
-  elif subcommand == 'fetch':
-    _fetch.entrypoint(args)
+  elif subcommand == 'pull':
+    _pull.entrypoint(args)
   else:
     assert False

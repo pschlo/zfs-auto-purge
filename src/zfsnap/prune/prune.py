@@ -1,6 +1,6 @@
 from typing import Optional
 
-from ..zfs import Snapshot, get_snapshots, destroy_snapshots
+from ..zfs import Snapshot, LocalZfsCli
 from .policy import apply_policy, ExpirePolicy
 
 
@@ -15,8 +15,9 @@ def prune_snapshots(
   dataset: Optional[str] = None,
   recursive: bool = False,
 ) -> None:
+  cli = LocalZfsCli()
   
-  snaps = get_snapshots(dataset, recursive=recursive)
+  snaps = cli.get_snapshots(dataset, recursive=recursive)
   if not snaps:
     print(f'Did not find any snapshots, nothing to do')
     return
@@ -44,4 +45,4 @@ def prune_snapshots(
     return
 
   print(f'Pruning snapshots')
-  destroy_snapshots(destroy)
+  cli.destroy_snapshots(destroy)

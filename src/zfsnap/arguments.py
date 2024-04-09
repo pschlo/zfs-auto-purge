@@ -4,7 +4,7 @@ from dateutil.relativedelta import relativedelta
 import re
 from . import prune as _prune
 from . import create as _create
-from . import fetch as _fetch
+from . import pull as _pull
 
 
 def get_args() -> argparse.Namespace:
@@ -18,6 +18,6 @@ def get_args() -> argparse.Namespace:
   # create subcommand parsers
   _prune.setup_parser(subparsers.add_parser('prune'))
   _create.setup_parser(subparsers.add_parser('create'))
-  _fetch.setup_parser(subparsers.add_parser('fetch'))
+  _pull.setup_parser(subparsers.add_parser('pull'))
 
   return parser.parse_args()
