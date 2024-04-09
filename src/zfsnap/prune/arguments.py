@@ -7,9 +7,6 @@ from argparse import ArgumentParser
 from .policy import parse_duration
 
 
-
-
-
 COUNT_OPTS = [
   "--keep-last",
   "--keep-hourly",
@@ -36,8 +33,3 @@ def setup_parser(parser: ArgumentParser) -> None:
     parser.add_argument(opt, type=int, metavar="N", default=0)
   for opt in WITHIN_OPTS:
     parser.add_argument(opt, type=parse_duration, metavar="DURATION", default=relativedelta())
-
-  # # other arguments
-  # parser.add_argument('-n', '--dry-run', action='store_true')
-  # parser.add_argument('-d', '--dataset', type=str, metavar="DATASET", default=None)
-  # parser.add_argument('-r', '--recursive', action='store_true')
