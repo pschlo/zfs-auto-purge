@@ -10,7 +10,7 @@ def entrypoint(args: Namespace) -> None:
   if not args.dataset:
     raise ValueError(f"No dataset provided")
   local_dataset: str = args.dataset
-  user, host, remote_dataset = parse_remote(args.source)
+  user, host, remote_dataset = parse_remote(args.remote)
   port: Optional[int] = args.port
 
   print(f'Pulling from remote source dataset "{remote_dataset}" to local dest dataset "{local_dataset}"')

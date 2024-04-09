@@ -14,4 +14,12 @@ def parse_remote(source: str) -> tuple[Optional[str], str, str]:
     user = None
     host = netloc
 
+  # validation
+  if (
+    user is not None and not user
+    or not host
+    or not dataset
+  ):
+    raise ValueError(f'Invalid remote')
+
   return user, host, dataset
