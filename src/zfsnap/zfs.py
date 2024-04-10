@@ -40,11 +40,10 @@ class Hold:
 
 class ZfsCli:
   def run_text_command(self, cmd: list[str]) -> str:
-    p: Popen[str] = self.start_command(cmd, stdout=PIPE, stderr=PIPE, text=True)
-    stdout, stderr = p.communicate()
+    p: Popen[str] = self.start_command(cmd, stdout=PIPE, text=True)
+    stdout, _ = p.communicate()
     if p.returncode > 0:
-      print(f'ERROR: {stderr.strip()}')
-      raise CalledProcessError(p.returncode, cmd=p.args, output=stdout, stderr=stderr)
+      raise CalledProcessError(p.returncode, cmd=p.args, output=stdout)
     return stdout.strip()
   
   def start_command(self, cmd: list[str], stdin=None, stdout=None, stderr=None, text=False) -> Popen:

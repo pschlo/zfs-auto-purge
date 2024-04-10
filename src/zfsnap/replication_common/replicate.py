@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Optional
+from subprocess import CalledProcessError
 
 from ..zfs import Snapshot, ZfsCli
 
@@ -32,8 +33,10 @@ def replicate(source_cli: ZfsCli, source_dataset: str, dest_cli: ZfsCli, dest_da
   send_proc = source_cli.send_snapshot_async(source_snaps[0], base=source_snaps[base])
   assert send_proc.stdout is not None
   recv_proc = dest_cli.receive_snapshot_async(dest_dataset, stdin=send_proc.stdout)
-  send_proc.wait()
-  recv_proc.wait()
+  for p in send_proc, recv_proc:
+    p.wait()
+    if p.returncode > 0:
+      raise CalledProcessError(p.returncode, cmd=p.args)
 
   # up to base, dest and source how have the same snaps
   dest_snaps = [s.with_dataset(dest_dataset) for s in source_snaps[:base]] + dest_snaps
