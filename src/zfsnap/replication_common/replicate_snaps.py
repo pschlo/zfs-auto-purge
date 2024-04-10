@@ -28,9 +28,32 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
 
   print(f'Transferring {base} snapshots')
 
-  # move from index base backwards to index 0
+  source_pool = source_cli.get_pool_from_dataset(source_snaps[0].dataset)
+  dest_pool = dest_cli.get_pool_from_dataset(dest_dataset)
+  source_tag = f'zfsnap-sendbase-{dest_pool.guid}'
+  dest_tag = f'zfsnap-recvbase-{source_pool.guid}'
+
+  def hold_source(snap: Snapshot):
+    source_cli.hold(snap, source_tag)
+  
+  def hold_dest(snap: Snapshot):
+    dest_cli.hold(snap, dest_tag)
+  
+  def release_source(snap: Snapshot):
+    hold = source_cli.get_hold(snap, source_tag)
+    if hold is not None:
+      source_cli.release(hold)
+  
+  def release_dest(snap: Snapshot):
+    hold = dest_cli.get_hold(snap, dest_tag)
+    if hold is not None:
+      dest_cli.release(hold)
+
   for i in range(base):
-    send_proc = source_cli.send_snapshot_async(source_snaps[base-i-1], base=source_snaps[base-i])
+    transfer_snap, base_snap = source_snaps[base-i-1: base-i+1]
+    hold_source(transfer_snap)
+
+    send_proc = source_cli.send_snapshot_async(transfer_snap, base=base_snap)
     assert send_proc.stdout is not None
     recv_proc = dest_cli.receive_snapshot_async(dest_dataset, stdin=send_proc.stdout)
     for p in send_proc, recv_proc:
@@ -39,27 +62,8 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
         raise CalledProcessError(p.returncode, cmd=p.args)
     print(f'{i+1}/{base} transferred')
 
-  # up to base, dest and source how have the same snaps
-  dest_snaps = [s.with_dataset(dest_dataset) for s in source_snaps[:base]] + dest_snaps
-  print(f'Transfer completed, updating holds')
-  
+    hold_dest(transfer_snap.with_dataset(dest_dataset))
+    release_dest(base_snap.with_dataset(dest_dataset))
+    release_source(base_snap)
 
-  ## --- Manage holds ---
-  source_pool = source_cli.get_pool_from_dataset(source_snaps[0].dataset)
-  dest_pool = dest_cli.get_pool_from_dataset(dest_dataset)
-
-  source_tag = f'zfsnap-sendbase-{dest_pool.guid}'
-  dest_tag = f'zfsnap-recvbase-{source_pool.guid}'
-
-  # hold the just transferred latest snap
-  source_cli.hold(source_snaps[0], source_tag)
-  dest_cli.hold(dest_snaps[0], dest_tag)
-
-  # release base snaps
-  hold = source_cli.get_hold(source_snaps[base], source_tag)
-  if hold is not None:
-    source_cli.release(hold)
-
-  hold = dest_cli.get_hold(dest_snaps[base], dest_tag)
-  if hold is not None:
-    dest_cli.release(hold)
+  print(f'Transfer completed')
