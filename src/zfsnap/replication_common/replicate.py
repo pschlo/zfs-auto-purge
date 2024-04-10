@@ -3,6 +3,7 @@ from __future__ import annotations
 from ..zfs import Snapshot, ZfsCli
 
 
+# TODO: recursive replication (only snapshots, i.e. less than -R)
 def replicate(source_cli: ZfsCli, source_dataset: str, dest_cli: ZfsCli, dest_dataset: str):
   source_snaps = sorted(source_cli.get_snapshots(source_dataset), key=lambda s: s.timestamp, reverse=True)
   source_latest = source_snaps[0]
