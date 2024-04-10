@@ -32,11 +32,6 @@ class Pool:
   name: str
   guid: int
 
-@dataclass(eq=True, frozen=True)
-class Hold:
-  snapshot_fullname: str
-  tag: str
-
 
 class ZfsCli:
   def run_text_command(self, cmd: list[str]) -> str:
@@ -69,38 +64,25 @@ class ZfsCli:
       timestamp=snapshot.timestamp,
       guid=snapshot.guid
     )
-  
-  def hold(self, snapshot: Snapshot, tag: str) -> Hold:
-    self.run_text_command(['zfs', 'hold', tag, snapshot.full_name])
-    hold = self.get_hold(snapshot, tag)
-    assert hold is not None
-    return hold
-
-  def get_hold(self, snapshot: Snapshot, tag: str) -> Optional[Hold]:
-    holds = self.get_holds(snapshot)
-    return next((h for h in holds if h.tag == tag), None)
 
   # TrueNAS CORE 13.0 does not support holds -p, so we do not fetch timestamp
-  def get_holds(self, snapshot: Snapshot) -> set[Hold]:
-    lines = self.run_text_command(['zfs', 'holds', '-H', snapshot.full_name]).splitlines()
-    holds: set[Hold] = set()
-    for line in lines:
-      fields = line.split('\t')
-      holds.add(Hold(
-        snapshot_fullname=fields[0],
-        tag=fields[1],
-      ))
-    return holds
+  def get_hold_tags(self, snapshots: Collection[Snapshot]) -> set[str]:
+    lines = self.run_text_command(['zfs', 'holds', '-H', ' '.join(s.full_name for s in snapshots)]).splitlines()
+    tags: set[str] = {line.split('\t')[1] for line in lines}
+    return tags
+  
+  def hold(self, snapshots: Collection[Snapshot], tag: str) -> None:
+    self.run_text_command(['zfs', 'hold', tag, ' '.join(s.full_name for s in snapshots)])
 
-  def release(self, hold: Hold) -> None:
-    self.run_text_command(['zfs', 'release', hold.tag, hold.snapshot_fullname])
+  def release(self, snapshots: Collection[Snapshot], tag: str) -> None:
+    self.run_text_command(['zfs', 'release', tag, ' '.join(s.full_name for s in snapshots)])
 
   def get_pool_from_dataset(self, dataset: str) -> Pool:
     name = dataset.split('/')[0]
     guid = self.run_text_command(['zpool', 'get', '-Hp', '-o', 'value', 'guid', name])
     return Pool(name=name, guid=int(guid))
 
-  def create_snapshot(self, dataset: str, short_name: str, recursive: bool = False) -> Snapshot:
+  def create_snapshot(self, dataset: str, short_name: str, recursive: bool = False) -> None:
     full_name = f'{dataset}@{short_name}'
     
     # take snapshot
@@ -109,17 +91,6 @@ class ZfsCli:
       cmd += ['-r']
     cmd += [full_name]
     self.run_text_command(cmd)
-
-    # fetch infos and return Snapshot object
-    cmd = ['zfs', 'get', '-Hp', '-o', 'value', 'creation,guid', full_name]
-    timestamp, guid = self.run_text_command(cmd).splitlines()
-    return Snapshot(
-      dataset=dataset,
-      short_name=short_name,
-      timestamp=datetime.fromtimestamp(int(timestamp)),
-      guid=int(guid)
-    )
-
 
   def get_snapshots(self, dataset: Optional[str] = None, recursive: bool = False) -> set[Snapshot]:
     cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', 'name,creation,guid']
