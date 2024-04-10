@@ -7,7 +7,6 @@ from ..zfs import Snapshot, ZfsCli
 from .get_base_index import get_base_index
 
 
-# TODO: recursive replication (only snapshots, i.e. less than -R)
 # TODO: raw send for encrypted datasets?
 """
 replicates source_snaps to dest_dataset
