@@ -26,12 +26,10 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
     print(f'Source dataset does not have any new snapshots, nothing to do')
     return
 
-  print(f'Dest latest is {dest_snaps[0]}')
   print(f'Transferring {base} snapshots')
 
   # move from index base backwards to index 0
   for i in range(base):
-    print(f'Sending from {source_snaps[base-i]} to {source_snaps[base-i-1]}')
     send_proc = source_cli.send_snapshot_async(source_snaps[base-i-1], base=source_snaps[base-i])
     assert send_proc.stdout is not None
     recv_proc = dest_cli.receive_snapshot_async(dest_dataset, stdin=send_proc.stdout)
@@ -39,7 +37,7 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
       p.wait()
       if p.returncode > 0:
         raise CalledProcessError(p.returncode, cmd=p.args)
-    print(f'{i+1}/{base} sent')
+    print(f'{i+1}/{base} transferred')
 
   # up to base, dest and source how have the same snaps
   dest_snaps = [s.with_dataset(dest_dataset) for s in source_snaps[:base]] + dest_snaps
