@@ -45,9 +45,14 @@ def replicate(source_cli: ZfsCli, source_dataset: str, dest_cli: ZfsCli, dest_da
   dest_tag = f'zfsnap-recvbase-{source_pool.guid}'
 
   # hold the just transferred snap on source and dest, i.e. source_latest
-  source_cli.hold_snapshot(source_latest, source_tag)
-  dest_cli.hold_snapshot(dest_latest, dest_tag)
+  source_cli.hold(source_latest, source_tag)
+  dest_cli.hold(dest_latest, dest_tag)
 
   # release previously held base snap, i.e. source_base
-  source_cli.release_snapshot(source_base, source_tag)
-  dest_cli.release_snapshot(dest_base, dest_tag)
+  hold = source_cli.get_hold(source_base, source_tag)
+  if hold is not None:
+    source_cli.release(hold)
+
+  hold = dest_cli.get_hold(dest_base, dest_tag)
+  if hold is not None:
+    dest_cli.release(hold)

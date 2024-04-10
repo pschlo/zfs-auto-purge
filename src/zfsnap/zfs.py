@@ -32,6 +32,12 @@ class Pool:
   name: str
   guid: int
 
+@dataclass(eq=True, frozen=True)
+class Hold:
+  snapshot_fullname: str
+  tag: str
+  timestamp: int
+
 
 class ZfsCli:
   def run_text_command(self, cmd: list[str]) -> str:
@@ -66,11 +72,30 @@ class ZfsCli:
       guid=snapshot.guid
     )
   
-  def hold_snapshot(self, snapshot: Snapshot, tag: str) -> None:
+  def hold(self, snapshot: Snapshot, tag: str) -> Hold:
     self.run_text_command(['zfs', 'hold', tag, snapshot.full_name])
+    hold = self.get_hold(snapshot, tag)
+    assert hold is not None
+    return hold
 
-  def release_snapshot(self, snapshot: Snapshot, tag: str) -> None:
-    self.run_text_command(['zfs', 'release', tag, snapshot.full_name])
+  def get_hold(self, snapshot: Snapshot, tag: str) -> Optional[Hold]:
+    holds = self.get_holds(snapshot)
+    return next((h for h in holds if h.tag == tag), None)
+
+  def get_holds(self, snapshot: Snapshot) -> set[Hold]:
+    lines = self.run_text_command(['zfs', 'holds', '-Hp', snapshot.full_name]).splitlines()
+    holds: set[Hold] = set()
+    for line in lines:
+      fields = line.split('\t')
+      holds.add(Hold(
+        snapshot_fullname=fields[0],
+        tag=fields[1],
+        timestamp=int(fields[2])
+      ))
+    return holds
+
+  def release(self, hold: Hold) -> None:
+    self.run_text_command(['zfs', 'release', hold.tag, hold.snapshot_fullname])
 
   def get_pool_from_dataset(self, dataset: str) -> Pool:
     name = dataset.split('/')[0]
