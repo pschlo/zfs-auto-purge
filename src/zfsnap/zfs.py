@@ -36,7 +36,6 @@ class Pool:
 class Hold:
   snapshot_fullname: str
   tag: str
-  timestamp: int
 
 
 class ZfsCli:
@@ -82,15 +81,15 @@ class ZfsCli:
     holds = self.get_holds(snapshot)
     return next((h for h in holds if h.tag == tag), None)
 
+  # TrueNAS CORE 13.0 does not support holds -p, so we do not fetch timestamp
   def get_holds(self, snapshot: Snapshot) -> set[Hold]:
-    lines = self.run_text_command(['zfs', 'holds', '-Hp', snapshot.full_name]).splitlines()
+    lines = self.run_text_command(['zfs', 'holds', '-H', snapshot.full_name]).splitlines()
     holds: set[Hold] = set()
     for line in lines:
       fields = line.split('\t')
       holds.add(Hold(
         snapshot_fullname=fields[0],
         tag=fields[1],
-        timestamp=int(fields[2])
       ))
     return holds
 

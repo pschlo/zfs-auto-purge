@@ -15,19 +15,18 @@ def get_base_index(source_snaps: list[Snapshot], dest_snaps: list[Snapshot]) -> 
 # TODO: recursive replication (only snapshots, i.e. less than -R)
 # TODO: raw send for encrypted datasets?
 """
-Let S and D be the reverse snapshots on source and dest, newest first.
-D is a suffix of S, i.e. S[i:] = D for some i.
+Let S and D be the snapshots on source and dest, newest first.
+Then D is a suffix of S, i.e. S[i:] = D for some i.
 We call this index i the base index. It is used as an incremental basis for sending snapshots S[:i].
 """
 def replicate(source_cli: ZfsCli, source_dataset: str, dest_cli: ZfsCli, dest_dataset: str):
   source_snaps = sorted(source_cli.get_snapshots(source_dataset), key=lambda s: s.timestamp, reverse=True)
   dest_snaps = sorted(dest_cli.get_snapshots(dest_dataset), key=lambda s: s.timestamp, reverse=True)
 
-  if source_snaps[0].guid == dest_snaps[0].guid:
+  base = get_base_index(source_snaps, dest_snaps)
+  if base == 0:
     print(f'Source dataset does not have any new snapshots, nothing to do')
     return
-  
-  base = get_base_index(source_snaps, dest_snaps)
 
   print(f'Transferring {base} snapshots')
   send_proc = source_cli.send_snapshot_async(source_snaps[0], base=source_snaps[base])
@@ -38,9 +37,9 @@ def replicate(source_cli: ZfsCli, source_dataset: str, dest_cli: ZfsCli, dest_da
 
   # up to base, dest and source how have the same snaps
   dest_snaps = [s.with_dataset(dest_dataset) for s in source_snaps[:base]] + dest_snaps
-  print(f'Transfer completed')
-
+  print(f'Transfer completed, updating holds')
   
+
   ## --- Manage holds ---
   source_pool = source_cli.get_pool_from_dataset(source_dataset)
   dest_pool = dest_cli.get_pool_from_dataset(dest_dataset)
@@ -48,11 +47,11 @@ def replicate(source_cli: ZfsCli, source_dataset: str, dest_cli: ZfsCli, dest_da
   source_tag = f'zfsnap-sendbase-{dest_pool.guid}'
   dest_tag = f'zfsnap-recvbase-{source_pool.guid}'
 
-  # hold the just transferred snap on source and dest
+  # hold the just transferred latest snap
   source_cli.hold(source_snaps[0], source_tag)
   dest_cli.hold(dest_snaps[0], dest_tag)
 
-  # release previously held base snaps
+  # release base snaps
   hold = source_cli.get_hold(source_snaps[base], source_tag)
   if hold is not None:
     source_cli.release(hold)
