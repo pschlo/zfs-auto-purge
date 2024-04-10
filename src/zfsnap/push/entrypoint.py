@@ -12,6 +12,7 @@ def entrypoint(args: Namespace) -> None:
   local_dataset: str = args.dataset
   user, host, remote_dataset = parse_remote(args.remote)
   port: Optional[int] = args.port
+  recursive: bool = args.recursive
 
   print(f'Pushing from local source dataset "{local_dataset}" to remote dest dataset "{remote_dataset}"')
 
@@ -22,5 +23,6 @@ def entrypoint(args: Namespace) -> None:
     source_cli=local_cli,
     source_dataset=local_dataset,
     dest_cli=remote_cli,
-    dest_dataset=remote_dataset
+    dest_dataset=remote_dataset,
+    recursive=recursive
   )

@@ -52,7 +52,7 @@ class ZfsCli:
   def send_snapshot_async(self, snapshot: Snapshot, base: Optional[Snapshot] = None) -> Popen[bytes]:
     cmd = ['zfs', 'send']
     if base is not None:
-      cmd += ['-I', base.full_name]
+      cmd += ['-i', base.full_name]
     cmd += [snapshot.full_name]
     return self.start_command(cmd, stdout=PIPE)
   
