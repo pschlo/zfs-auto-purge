@@ -12,6 +12,12 @@ def entrypoint(args: Namespace) -> None:
   dataset: str = args.dataset
   recursive: bool = args.recursive
   snapname: str = args.snapname or to_hex(random.getrandbits(64), 16)
+  tags = args.tag or []
+
+  # add tags
+  tags_str = '_'.join(tags)
+  if tags_str:
+    snapname += f'_{tags_str}'
 
   print(f'Creating snapshot of "{dataset}"')
   snap = LocalZfsCli().create_snapshot(dataset=dataset, short_name=snapname, recursive=recursive)
