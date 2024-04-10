@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zfsnap"
-version = "1.0.3"
+version = "1.1.0"
 authors = [
   { name="pschlo", email="author@example.com" },
 ]
-description = "Policy-based ZFS snapshot pruning"
+description = "ZFS snapshot tool"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
