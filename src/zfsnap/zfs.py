@@ -32,6 +32,11 @@ class Pool:
   name: str
   guid: int
 
+@dataclass(eq=True, frozen=True)
+class Hold:
+  snapshot_fullname: str
+  tag: str
+
 
 class ZfsCli:
   def run_text_command(self, cmd: list[str]) -> str:
@@ -54,7 +59,6 @@ class ZfsCli:
   def receive_snapshot_async(self, dataset: str, stdin: IO[bytes]) -> Popen[bytes]:
     cmd = ['zfs', 'receive', dataset]
     return self.start_command(cmd, stdin=stdin)
-  
 
   def rename_snapshot(self, snapshot: Snapshot, new_short_name: str) -> Snapshot:
     self.run_text_command(['zfs', 'rename', snapshot.full_name, f'@{new_short_name}'])
@@ -66,10 +70,19 @@ class ZfsCli:
     )
 
   # TrueNAS CORE 13.0 does not support holds -p, so we do not fetch timestamp
-  def get_hold_tags(self, snapshots: Collection[Snapshot]) -> set[str]:
+  def get_holds(self, snapshots: Collection[Snapshot]) -> set[Hold]:
     lines = self.run_text_command(['zfs', 'holds', '-H', ' '.join(s.full_name for s in snapshots)]).splitlines()
-    tags: set[str] = {line.split('\t')[1] for line in lines}
-    return tags
+    holds: set[Hold] = set()
+    for line in lines:
+      fields = line.split('\t')
+      holds.add(Hold(
+        snapshot_fullname=fields[0],
+        tag=fields[1]
+      ))
+    return holds
+  
+  def has_hold(self, snapshot: Snapshot, tag: str) -> bool:
+    return any((s.tag == tag for s in self.get_holds([snapshot])))
   
   def hold(self, snapshots: Collection[Snapshot], tag: str) -> None:
     self.run_text_command(['zfs', 'hold', tag, ' '.join(s.full_name for s in snapshots)])
