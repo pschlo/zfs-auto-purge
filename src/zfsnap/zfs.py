@@ -157,7 +157,12 @@ class ZfsCli:
     # run one command per dataset
     for dataset, snaps in _map.items():
       short_names = ','.join(map(lambda s: s.short_name, snaps))
-      self.run_text_command(['zfs', 'destroy', f'{dataset}@{short_names}'])
+      try:
+        self.run_text_command(['zfs', 'destroy', f'{dataset}@{short_names}'])
+      except CalledProcessError as e:
+        # ignore if destroy failed with code 1
+        if e.returncode == 1: pass
+        raise
 
 
 
