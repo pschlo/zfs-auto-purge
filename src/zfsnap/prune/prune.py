@@ -4,48 +4,22 @@ from subprocess import CalledProcessError
 
 from ..zfs import Snapshot, LocalZfsCli
 from .policy import apply_policy, ExpirePolicy
-from ..utils import group_by
+from ..utils import group_snaps_by
 
 
-def print_snap(snap: Snapshot):
-  print(f'    {snap.timestamp}  {snap.fullname}')
-
-def print_group(keep: Collection[Snapshot], destroy: Collection[Snapshot], group: Optional[str]=None):
-  if group is not None:
-    print(f'Group "{group}"')
-  print(f'Keeping {len(keep)} snapshots')
-  for snap in sorted(keep, key=lambda x: x.timestamp, reverse=True):
-    print_snap(snap)
-  print(f'Destroying {len(destroy)} snapshots')
-  for snap in sorted(destroy, key=lambda x: x.timestamp, reverse=True):
-    print_snap(snap)
-
-def get_groups(group_type: str, snaps: Collection[Snapshot]) -> Mapping[Any, Collection[Snapshot]]:
-  if group_type == 'dataset':
-    return group_by(snaps, lambda s: s.dataset)
-  elif group_type == '':
-    return {None: snaps}
-  else:
-    assert False
-
-
+"""
+Prune given snapshots according to keep policy
+"""
 def prune_snapshots(
+  snapshots: Collection[Snapshot],
   policy: ExpirePolicy,
   *,
+  group_by: str = 'dataset',
   dry_run: bool = True,
-  dataset: Optional[str] = None,
-  recursive: bool = False,
-  group_type: str = 'dataset'
 ) -> None:
   cli = LocalZfsCli()
-  
-  snaps = cli.get_snapshots(dataset, recursive=recursive)
-  if not snaps:
-    print(f'Did not find any snapshots, nothing to do')
-    return
 
-  print(f'Found {len(snaps)} snapshots')
-  groups = get_groups(group_type, snaps)
+  groups = get_groups(group_by, snapshots)
   keep: set[Snapshot] = set()
   destroy: set[Snapshot] = set()
   # loop over groups and apply policy to each group
@@ -65,10 +39,33 @@ def prune_snapshots(
 
   print(f'Pruning snapshots')
   # call destroy for each dataset
-  for _dataset, _snaps in group_by(destroy, lambda s: s.dataset).items():
+  for _dataset, _snaps in group_snaps_by(destroy, lambda s: s.dataset).items():
     try:
       cli.destroy_snapshots(_dataset, {s.shortname for s in _snaps})
     except CalledProcessError as e:
       # ignore if destroy failed with code 1, e.g. because it was held
       if e.returncode == 1: pass
       raise
+
+
+
+def print_snap(snap: Snapshot):
+  print(f'    {snap.timestamp}  {snap.fullname}')
+
+def print_group(keep: Collection[Snapshot], destroy: Collection[Snapshot], group: Optional[str]=None):
+  if group is not None:
+    print(f'Group "{group}"')
+  print(f'Keeping {len(keep)} snapshots')
+  for snap in sorted(keep, key=lambda x: x.timestamp, reverse=True):
+    print_snap(snap)
+  print(f'Destroying {len(destroy)} snapshots')
+  for snap in sorted(destroy, key=lambda x: x.timestamp, reverse=True):
+    print_snap(snap)
+
+def get_groups(group_type: str, snaps: Collection[Snapshot]) -> Mapping[Any, Collection[Snapshot]]:
+  if group_type == 'dataset':
+    return group_snaps_by(snaps, lambda s: s.dataset)
+  elif group_type == '':
+    return {None: snaps}
+  else:
+    assert False

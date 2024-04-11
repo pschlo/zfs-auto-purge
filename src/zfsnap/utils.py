@@ -6,7 +6,7 @@ from .zfs import Snapshot
 
 T = TypeVar('T')
 
-def group_by(snapshots: Collection[Snapshot], group: Callable[[Snapshot], T]) -> dict[T, set[Snapshot]]:
+def group_snaps_by(snapshots: Collection[Snapshot], group: Callable[[Snapshot], T]) -> dict[T, set[Snapshot]]:
   a: dict[T, set[Snapshot]] = dict()
   for snap in snapshots:
     g = group(snap)
