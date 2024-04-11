@@ -32,3 +32,5 @@ def setup_parser(parser: ArgumentParser) -> None:
     parser.add_argument(opt, type=int, metavar="N", default=0)
   for opt in WITHIN_OPTS:
     parser.add_argument(opt, type=parse_duration, metavar="DURATION", default=relativedelta())
+
+  parser.add_argument('--group-by', type=str, metavar='GROUP', choices={'dataset'}, default='dataset')

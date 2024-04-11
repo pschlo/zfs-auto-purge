@@ -27,4 +27,4 @@ def entrypoint(args: Namespace):
     name = args.keep_name
   )
 
-  prune_snapshots(policy, dry_run=args.dry_run, dataset=args.dataset, recursive=args.recursive)
+  prune_snapshots(policy, dry_run=args.dry_run, dataset=args.dataset, recursive=args.recursive, group=args.group_by)

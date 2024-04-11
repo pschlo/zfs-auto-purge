@@ -1,6 +1,7 @@
-from typing import Optional
+from typing import Optional, Any, Callable, TypeVar
 from collections.abc import Collection
 from subprocess import CalledProcessError
+from enum import Enum
 
 from ..zfs import Snapshot, LocalZfsCli
 from .policy import apply_policy, ExpirePolicy
@@ -10,12 +11,15 @@ def print_snap(snap: Snapshot):
   print(f'    {snap.timestamp}  {snap.fullname}')
 
 
-def group_by_dataset(snapshots: Collection[Snapshot]) -> dict[str, set[Snapshot]]:
-  a: dict[str, set[Snapshot]] = dict()
+T = TypeVar('T')
+
+def group_by(snapshots: Collection[Snapshot], group: Callable[[Snapshot], T]) -> dict[T, set[Snapshot]]:
+  a: dict[T, set[Snapshot]] = dict()
   for snap in snapshots:
-    if snap.dataset not in a:
-      a[snap.dataset] = set()
-    a[snap.dataset].add(snap)
+    g = group(snap)
+    if g not in a:
+      a[g] = set()
+    a[g].add(snap)
   return a
 
 
@@ -25,6 +29,7 @@ def prune_snapshots(
   dry_run: bool = True,
   dataset: Optional[str] = None,
   recursive: bool = False,
+  group: str = 'dataset'
 ) -> None:
   cli = LocalZfsCli()
   
@@ -33,24 +38,33 @@ def prune_snapshots(
     print(f'Did not find any snapshots, nothing to do')
     return
 
-  dataset_to_snaps = group_by_dataset(snaps)
-  print(f'Found {len(snaps)} snapshots in {len(dataset_to_snaps)} datasets')
+  print(f'Found {len(snaps)} snapshots')
   
-  print(f'Applying policy {policy} to each dataset')
+  print(f'Applying policy {policy}')
+  groups: dict[Any, set[Snapshot]]
+  if group == 'dataset':
+    groups = group_by(snaps, lambda s: s.dataset)
+  elif group == '':
+    groups = {None: snaps}
+  else:
+    assert False
+
+  # loop over groups and apply policy to each group
   keep = set()
   destroy = set()
-  for _dataset, _snaps in dataset_to_snaps.items():
+  for _group, _snaps in groups.items():
     _keep, _destroy = apply_policy(_snaps, policy)
     keep.update(_keep)
     destroy.update(_destroy)
 
-  print(f'Keeping {len(keep)} snapshots')
-  for snap in sorted(keep, key=lambda x: x.timestamp, reverse=True):
-    print_snap(snap)
-
-  print(f'Destroying {len(destroy)} snapshots')
-  for snap in sorted(destroy, key=lambda x: x.timestamp, reverse=True):
-    print_snap(snap)
+    if _group is not None:
+      print(f'Group "{_group}"')
+    print(f'Keeping {len(_keep)} snapshots')
+    for snap in sorted(_keep, key=lambda x: x.timestamp, reverse=True):
+      print_snap(snap)
+    print(f'Destroying {len(_destroy)} snapshots')
+    for snap in sorted(_destroy, key=lambda x: x.timestamp, reverse=True):
+      print_snap(snap)
 
   if not keep:
     raise RuntimeError(f"Refusing to destroy all snapshots")
@@ -62,7 +76,7 @@ def prune_snapshots(
 
   print(f'Pruning snapshots')
   # call destroy for each dataset
-  for _dataset, _snaps in group_by_dataset(destroy).items():
+  for _dataset, _snaps in group_by(destroy, lambda s: s.dataset).items():
     try:
       cli.destroy_snapshots(_dataset, {s.shortname for s in _snaps})
     except CalledProcessError as e:
