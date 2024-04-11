@@ -121,13 +121,7 @@ class ZfsCli:
 
   def destroy_snapshots(self, dataset: str, snapshots_shortnames: Collection[str]) -> None:
     shortnames_str = ','.join(snapshots_shortnames)
-    try:
-      self.run_text_command(['zfs', 'destroy', f'{dataset}@{shortnames_str}'])
-    except CalledProcessError as e:
-      # ignore if destroy failed with code 1
-      if e.returncode == 1: pass
-      raise
-
+    self.run_text_command(['zfs', 'destroy', f'{dataset}@{shortnames_str}'])
 
 
 class LocalZfsCli(ZfsCli):

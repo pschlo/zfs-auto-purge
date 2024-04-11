@@ -1,5 +1,6 @@
 from typing import Optional
 from collections.abc import Collection
+from subprocess import CalledProcessError
 
 from ..zfs import Snapshot, LocalZfsCli
 from .policy import apply_policy, ExpirePolicy
@@ -62,4 +63,9 @@ def prune_snapshots(
   print(f'Pruning snapshots')
   # call destroy for each dataset
   for _dataset, _snaps in group_by_dataset(destroy).items():
-    cli.destroy_snapshots(_dataset, {s.fullname for s in _snaps})
+    try:
+      cli.destroy_snapshots(_dataset, {s.shortname for s in _snaps})
+    except CalledProcessError as e:
+      # ignore if destroy failed with code 1, e.g. because it was held
+      if e.returncode == 1: pass
+      raise
