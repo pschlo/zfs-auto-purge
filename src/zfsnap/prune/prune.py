@@ -1,4 +1,5 @@
 from typing import Optional
+from collections.abc import Collection
 
 from ..zfs import Snapshot, LocalZfsCli
 from .policy import apply_policy, ExpirePolicy
@@ -6,6 +7,15 @@ from .policy import apply_policy, ExpirePolicy
 
 def print_snap(snap: Snapshot):
   print(f'    {snap.timestamp}  {snap.fullname}')
+
+
+def group_by_dataset(snapshots: Collection[Snapshot]) -> dict[str, set[Snapshot]]:
+  a: dict[str, set[Snapshot]] = dict()
+  for snap in snapshots:
+    if snap.dataset not in a:
+      a[snap.dataset] = set()
+    a[snap.dataset].add(snap)
+  return a
 
 
 def prune_snapshots(
@@ -21,10 +31,17 @@ def prune_snapshots(
   if not snaps:
     print(f'Did not find any snapshots, nothing to do')
     return
-  print(f'Found {len(snaps)} snapshots')
+
+  dataset_to_snaps = group_by_dataset(snaps)
+  print(f'Found {len(snaps)} snapshots in {len(dataset_to_snaps)} datasets')
   
-  print(f'Applying policy {policy}')
-  keep, destroy = apply_policy(snaps, policy)
+  print(f'Applying policy {policy} to each dataset')
+  keep = set()
+  destroy = set()
+  for _dataset, _snaps in dataset_to_snaps.items():
+    _keep, _destroy = apply_policy(_snaps, policy)
+    keep.update(_keep)
+    destroy.update(_destroy)
 
   print(f'Keeping {len(keep)} snapshots')
   for snap in sorted(keep, key=lambda x: x.timestamp, reverse=True):
@@ -36,23 +53,13 @@ def prune_snapshots(
 
   if not keep:
     raise RuntimeError(f"Refusing to destroy all snapshots")
-
-  if dry_run:
-    return
-
   if not destroy:
     print("No snapshots to prune")
     return
+  if dry_run:
+    return
 
   print(f'Pruning snapshots')
-
-  # group snapshots by dataset
-  _map: dict[str, set[str]] = dict()
-  for snap in destroy:
-    if snap.dataset not in _map:
-      _map[snap.dataset] = set()
-    _map[snap.dataset].add(snap.shortname)
-  
   # call destroy for each dataset
-  for _dataset, _shortnames in _map.items():
-    cli.destroy_snapshots(_dataset, _shortnames)
+  for _dataset, _snaps in group_by_dataset(destroy).items():
+    cli.destroy_snapshots(_dataset, {s.fullname for s in _snaps})
