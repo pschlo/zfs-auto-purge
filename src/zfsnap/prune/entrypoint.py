@@ -31,4 +31,4 @@ def entrypoint(args: Namespace):
   cli = LocalZfsCli()
 
   snapshots = cli.get_snapshots(dataset=args.dataset, recursive=args.recursive)
-  prune_snapshots(snapshots, policy, dry_run=args.dry_run, group_by=args.group_by)
+  prune_snapshots(cli, snapshots, policy, dry_run=args.dry_run, group_by=args.group_by)

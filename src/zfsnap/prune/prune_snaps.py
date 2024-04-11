@@ -2,13 +2,14 @@ from typing import Optional, Any, Mapping
 from collections.abc import Collection
 from subprocess import CalledProcessError
 
-from ..zfs import Snapshot, LocalZfsCli
+from ..zfs import Snapshot, ZfsCli
 from .policy import apply_policy, ExpirePolicy
 from ..utils import group_snaps_by
 
 
 
 def prune_snapshots(
+  cli: ZfsCli,
   snapshots: Collection[Snapshot],
   policy: ExpirePolicy,
   *,
@@ -18,8 +19,6 @@ def prune_snapshots(
   """
   Prune given snapshots according to keep policy
   """
-  cli = LocalZfsCli()
-
   if not snapshots:
     print(f'No snapshots, nothing to do')
     return
