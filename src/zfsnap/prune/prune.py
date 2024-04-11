@@ -5,7 +5,7 @@ from .policy import apply_policy, ExpirePolicy
 
 
 def print_snap(snap: Snapshot):
-  print(f'    {snap.timestamp}  {snap.full_name}')
+  print(f'    {snap.timestamp}  {snap.fullname}')
 
 
 def prune_snapshots(
@@ -45,4 +45,14 @@ def prune_snapshots(
     return
 
   print(f'Pruning snapshots')
-  cli.destroy_snapshots(destroy)
+
+  # group snapshots by dataset
+  _map: dict[str, set[str]] = dict()
+  for snap in destroy:
+    if snap.dataset not in _map:
+      _map[snap.dataset] = set()
+    _map[snap.dataset].add(snap.shortname)
+  
+  # call destroy for each dataset
+  for _dataset, _shortnames in _map.items():
+    cli.destroy_snapshots(_dataset, _shortnames)

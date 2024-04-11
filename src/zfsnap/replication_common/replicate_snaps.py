@@ -35,9 +35,9 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
 
   for i in range(base):
     transfer_snap, base_snap = source_snaps[base-i-1: base-i+1]
-    source_cli.hold([transfer_snap], source_tag)
+    source_cli.hold([transfer_snap.fullname], source_tag)
 
-    send_proc = source_cli.send_snapshot_async(transfer_snap, base=base_snap)
+    send_proc = source_cli.send_snapshot_async(transfer_snap.fullname, base_fullname=base_snap.fullname)
     assert send_proc.stdout is not None
     recv_proc = dest_cli.receive_snapshot_async(dest_dataset, stdin=send_proc.stdout)
     for p in send_proc, recv_proc:
@@ -46,14 +46,14 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
         raise CalledProcessError(p.returncode, cmd=p.args)
     print(f'{i+1}/{base} transferred')
 
-    dest_cli.hold([transfer_snap.with_dataset(dest_dataset)], dest_tag)
+    dest_cli.hold([transfer_snap.with_dataset(dest_dataset).fullname], dest_tag)
 
     # release snaps
     s = base_snap
-    if i != 0 or (i == 0 and source_cli.has_hold(s, source_tag)):
-      source_cli.release([s], source_tag)
+    if i != 0 or (i == 0 and source_cli.has_hold(s.fullname, source_tag)):
+      source_cli.release([s.fullname], source_tag)
     s = base_snap.with_dataset(dest_dataset)
-    if i != 0 or (i == 0 and dest_cli.has_hold(s, dest_tag)):
-      dest_cli.release([s], dest_tag)
+    if i != 0 or (i == 0 and dest_cli.has_hold(s.fullname, dest_tag)):
+      dest_cli.release([s.fullname], dest_tag)
 
   print(f'Transfer completed')

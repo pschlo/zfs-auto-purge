@@ -10,18 +10,18 @@ from dataclasses import dataclass
 @dataclass(eq=True, frozen=True)
 class Snapshot:
   dataset: str
-  short_name: str
+  shortname: str
   timestamp: datetime
   guid: int
 
   @property
-  def full_name(self):
-    return f'{self.dataset}@{self.short_name}'
+  def fullname(self):
+    return f'{self.dataset}@{self.shortname}'
   
   def with_dataset(self, dataset: str) -> Snapshot:
     return Snapshot(
       dataset=dataset,
-      short_name=self.short_name,
+      shortname=self.shortname,
       timestamp=self.timestamp,
       guid=self.guid
     )
@@ -38,6 +38,9 @@ class Hold:
   tag: str
 
 
+"""
+Each method call should correspond to exactly one CLI call
+"""
 class ZfsCli:
   def run_text_command(self, cmd: list[str]) -> str:
     p: Popen[str] = self.start_command(cmd, stdout=PIPE, text=True)
@@ -49,29 +52,20 @@ class ZfsCli:
   def start_command(self, cmd: list[str], stdin=None, stdout=None, stderr=None, text=False) -> Popen:
     return Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr, text=text)
   
-  def send_snapshot_async(self, snapshot: Snapshot, base: Optional[Snapshot] = None) -> Popen[bytes]:
+  def send_snapshot_async(self, snapshot_fullname: str, base_fullname: Optional[str] = None) -> Popen[bytes]:
     cmd = ['zfs', 'send']
-    if base is not None:
-      cmd += ['-i', base.full_name]
-    cmd += [snapshot.full_name]
+    if base_fullname is not None:
+      cmd += ['-i', base_fullname]
+    cmd += [snapshot_fullname]
     return self.start_command(cmd, stdout=PIPE)
   
   def receive_snapshot_async(self, dataset: str, stdin: IO[bytes]) -> Popen[bytes]:
     cmd = ['zfs', 'receive', dataset]
     return self.start_command(cmd, stdin=stdin)
 
-  def rename_snapshot(self, snapshot: Snapshot, new_short_name: str) -> Snapshot:
-    self.run_text_command(['zfs', 'rename', snapshot.full_name, f'@{new_short_name}'])
-    return Snapshot(
-      dataset=snapshot.dataset,
-      short_name=new_short_name,
-      timestamp=snapshot.timestamp,
-      guid=snapshot.guid
-    )
-
   # TrueNAS CORE 13.0 does not support holds -p, so we do not fetch timestamp
-  def get_holds(self, snapshots: Collection[Snapshot]) -> set[Hold]:
-    lines = self.run_text_command(['zfs', 'holds', '-H', ' '.join(s.full_name for s in snapshots)]).splitlines()
+  def get_holds(self, snapshots_fullnames: Collection[str]) -> set[Hold]:
+    lines = self.run_text_command(['zfs', 'holds', '-H', ' '.join(snapshots_fullnames)]).splitlines()
     holds: set[Hold] = set()
     for line in lines:
       fields = line.split('\t')
@@ -81,14 +75,14 @@ class ZfsCli:
       ))
     return holds
   
-  def has_hold(self, snapshot: Snapshot, tag: str) -> bool:
-    return any((s.tag == tag for s in self.get_holds([snapshot])))
+  def has_hold(self, snapshot_fullname: str, tag: str) -> bool:
+    return any((s.tag == tag for s in self.get_holds([snapshot_fullname])))
   
-  def hold(self, snapshots: Collection[Snapshot], tag: str) -> None:
-    self.run_text_command(['zfs', 'hold', tag, ' '.join(s.full_name for s in snapshots)])
+  def hold(self, snapshots_fullnames: Collection[str], tag: str) -> None:
+    self.run_text_command(['zfs', 'hold', tag, ' '.join(snapshots_fullnames)])
 
-  def release(self, snapshots: Collection[Snapshot], tag: str) -> None:
-    self.run_text_command(['zfs', 'release', tag, ' '.join(s.full_name for s in snapshots)])
+  def release(self, snapshots_fullnames: Collection[str], tag: str) -> None:
+    self.run_text_command(['zfs', 'release', tag, ' '.join(snapshots_fullnames)])
 
   def get_pool_from_dataset(self, dataset: str) -> Pool:
     name = dataset.split('/')[0]
@@ -97,8 +91,6 @@ class ZfsCli:
 
   def create_snapshot(self, dataset: str, short_name: str, recursive: bool = False) -> None:
     full_name = f'{dataset}@{short_name}'
-    
-    # take snapshot
     cmd = ['zfs', 'snapshot']
     if recursive:
       cmd += ['-r']
@@ -119,7 +111,7 @@ class ZfsCli:
       _dataset, _short_name = fields[0].split('@')
       snap = Snapshot(
         dataset = _dataset,
-        short_name = _short_name,
+        shortname = _short_name,
         timestamp = datetime.fromtimestamp(int(fields[1])),
         guid = int(fields[2])
       )
@@ -127,24 +119,14 @@ class ZfsCli:
 
     return snapshots
 
-
-  def destroy_snapshots(self, snapshots: Collection[Snapshot]) -> None:
-    # group snapshots by dataset
-    _map: dict[str, set[Snapshot]] = dict()
-    for snap in snapshots:
-      if snap.dataset not in _map:
-        _map[snap.dataset] = set()
-      _map[snap.dataset].add(snap)
-
-    # run one command per dataset
-    for dataset, snaps in _map.items():
-      short_names = ','.join(map(lambda s: s.short_name, snaps))
-      try:
-        self.run_text_command(['zfs', 'destroy', f'{dataset}@{short_names}'])
-      except CalledProcessError as e:
-        # ignore if destroy failed with code 1
-        if e.returncode == 1: pass
-        raise
+  def destroy_snapshots(self, dataset: str, snapshots_shortnames: Collection[str]) -> None:
+    shortnames_str = ','.join(snapshots_shortnames)
+    try:
+      self.run_text_command(['zfs', 'destroy', f'{dataset}@{shortnames_str}'])
+    except CalledProcessError as e:
+      # ignore if destroy failed with code 1
+      if e.returncode == 1: pass
+      raise
 
 
 
