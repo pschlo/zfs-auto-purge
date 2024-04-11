@@ -1,26 +1,32 @@
-from typing import Optional, Any, Callable, TypeVar
+from typing import Optional, Any, Mapping
 from collections.abc import Collection
 from subprocess import CalledProcessError
-from enum import Enum
 
 from ..zfs import Snapshot, LocalZfsCli
 from .policy import apply_policy, ExpirePolicy
+from ..utils import group_by
 
 
 def print_snap(snap: Snapshot):
   print(f'    {snap.timestamp}  {snap.fullname}')
 
+def print_group(keep: Collection[Snapshot], destroy: Collection[Snapshot], group: Optional[str]=None):
+  if group is not None:
+    print(f'Group "{group}"')
+  print(f'Keeping {len(keep)} snapshots')
+  for snap in sorted(keep, key=lambda x: x.timestamp, reverse=True):
+    print_snap(snap)
+  print(f'Destroying {len(destroy)} snapshots')
+  for snap in sorted(destroy, key=lambda x: x.timestamp, reverse=True):
+    print_snap(snap)
 
-T = TypeVar('T')
-
-def group_by(snapshots: Collection[Snapshot], group: Callable[[Snapshot], T]) -> dict[T, set[Snapshot]]:
-  a: dict[T, set[Snapshot]] = dict()
-  for snap in snapshots:
-    g = group(snap)
-    if g not in a:
-      a[g] = set()
-    a[g].add(snap)
-  return a
+def get_groups(group_type: str, snaps: Collection[Snapshot]) -> Mapping[Any, Collection[Snapshot]]:
+  if group_type == 'dataset':
+    return group_by(snaps, lambda s: s.dataset)
+  elif group_type == '':
+    return {None: snaps}
+  else:
+    assert False
 
 
 def prune_snapshots(
@@ -29,7 +35,7 @@ def prune_snapshots(
   dry_run: bool = True,
   dataset: Optional[str] = None,
   recursive: bool = False,
-  group: str = 'dataset'
+  group_type: str = 'dataset'
 ) -> None:
   cli = LocalZfsCli()
   
@@ -39,32 +45,15 @@ def prune_snapshots(
     return
 
   print(f'Found {len(snaps)} snapshots')
-  
-  print(f'Applying policy {policy}')
-  groups: dict[Any, set[Snapshot]]
-  if group == 'dataset':
-    groups = group_by(snaps, lambda s: s.dataset)
-  elif group == '':
-    groups = {None: snaps}
-  else:
-    assert False
-
+  groups = get_groups(group_type, snaps)
+  keep: set[Snapshot] = set()
+  destroy: set[Snapshot] = set()
   # loop over groups and apply policy to each group
-  keep = set()
-  destroy = set()
   for _group, _snaps in groups.items():
     _keep, _destroy = apply_policy(_snaps, policy)
     keep.update(_keep)
     destroy.update(_destroy)
-
-    if _group is not None:
-      print(f'Group "{_group}"')
-    print(f'Keeping {len(_keep)} snapshots')
-    for snap in sorted(_keep, key=lambda x: x.timestamp, reverse=True):
-      print_snap(snap)
-    print(f'Destroying {len(_destroy)} snapshots')
-    for snap in sorted(_destroy, key=lambda x: x.timestamp, reverse=True):
-      print_snap(snap)
+    print_group(_keep, _destroy, _group)
 
   if not keep:
     raise RuntimeError(f"Refusing to destroy all snapshots")
