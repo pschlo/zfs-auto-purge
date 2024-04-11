@@ -7,7 +7,6 @@ from .policy import apply_policy, ExpirePolicy
 from ..utils import group_snaps_by
 
 
-
 def prune_snapshots(
   cli: ZfsCli,
   snapshots: Collection[Snapshot],
@@ -44,7 +43,7 @@ def prune_snapshots(
   if dry_run:
     return
 
-  print(f'Pruning snapshots')
+  print(f'Destroying snapshots')
   # call destroy for each dataset
   for _dataset, _snaps in group_snaps_by(destroy, lambda s: s.dataset).items():
     try:
