@@ -4,7 +4,7 @@ from __future__ import annotations
 from argparse import Namespace
 
 from .policy import ExpirePolicy
-from .prune import prune_snapshots
+from .prune_snaps import prune_snapshots
 from ..zfs import LocalZfsCli
 
 
