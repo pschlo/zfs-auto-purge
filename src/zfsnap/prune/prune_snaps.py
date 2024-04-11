@@ -7,9 +7,7 @@ from .policy import apply_policy, ExpirePolicy
 from ..utils import group_snaps_by
 
 
-"""
-Prune given snapshots according to keep policy
-"""
+
 def prune_snapshots(
   snapshots: Collection[Snapshot],
   policy: ExpirePolicy,
@@ -17,6 +15,9 @@ def prune_snapshots(
   group_by: str = 'dataset',
   dry_run: bool = True,
 ) -> None:
+  """
+  Prune given snapshots according to keep policy
+  """
   cli = LocalZfsCli()
 
   groups = get_groups(group_by, snapshots)

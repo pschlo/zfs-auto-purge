@@ -8,15 +8,15 @@ from .get_base_index import get_base_index
 
 
 # TODO: raw send for encrypted datasets?
-"""
-replicates source_snaps to dest_dataset
-all source_snaps must be of same dataset
-
-Let S and D be the snapshots on source and dest, newest first.
-Then D is a suffix of S, i.e. S[i:] = D for some i.
-We call this index i the base index. It is used as an incremental basis for sending snapshots S[:i].
-"""
 def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest_cli: ZfsCli, dest_dataset: str):
+  """
+  replicates source_snaps to dest_dataset
+  all source_snaps must be of same dataset
+
+  Let S and D be the snapshots on source and dest, newest first.
+  Then D is a suffix of S, i.e. S[i:] = D for some i.
+  We call this index i the base index. It is used as an incremental basis for sending snapshots S[:i].
+  """
   source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
   dest_snaps = sorted(dest_cli.get_snapshots(dest_dataset), key=lambda s: s.timestamp, reverse=True)
 
