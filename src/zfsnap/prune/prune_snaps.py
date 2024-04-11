@@ -20,7 +20,14 @@ def prune_snapshots(
   """
   cli = LocalZfsCli()
 
+  if not snapshots:
+    print(f'No snapshots, nothing to do')
+    return
+
   groups = get_groups(group_by, snapshots)
+  s = f' {group_by}' if group_by else ''
+  print(f'Pruning {len(snapshots)} snapshots in {len(groups)}{s} groups')
+
   keep: set[Snapshot] = set()
   destroy: set[Snapshot] = set()
   # loop over groups and apply policy to each group

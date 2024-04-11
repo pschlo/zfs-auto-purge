@@ -31,9 +31,4 @@ def entrypoint(args: Namespace):
   cli = LocalZfsCli()
 
   snapshots = cli.get_snapshots(dataset=args.dataset, recursive=args.recursive)
-  if not snapshots:
-    print(f'Did not find any snapshots, nothing to do')
-    return
-  print(f'Found {len(snapshots)} snapshots')
-
   prune_snapshots(snapshots, policy, dry_run=args.dry_run, group_by=args.group_by)
