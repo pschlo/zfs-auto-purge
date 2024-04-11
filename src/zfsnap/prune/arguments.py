@@ -27,7 +27,7 @@ WITHIN_OPTS = [
 
 def setup_parser(parser: ArgumentParser) -> None:
   # policy arguments
-  parser.add_argument('--keep-name', type=re.compile, metavar="REGEX", default=None)
+  parser.add_argument('--keep-name-matches', type=re.compile, metavar="REGEX", default=None)
   for opt in COUNT_OPTS:
     parser.add_argument(opt, type=int, metavar="N", default=0)
   for opt in WITHIN_OPTS:

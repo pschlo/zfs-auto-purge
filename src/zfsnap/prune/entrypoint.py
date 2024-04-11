@@ -25,7 +25,7 @@ def entrypoint(args: Namespace):
     within_monthly = args.keep_within_monthly,
     within_yearly = args.keep_within_yearly,
 
-    name = args.keep_name
+    name_matches = args.keep_name_matches
   )
 
   cli = LocalZfsCli()
