@@ -130,7 +130,7 @@ def apply_policy(snapshots: Collection[Snapshot], policy: ExpirePolicy) -> tuple
     keep_snap = False
 
     # keep matching name
-    if policy.name_matches is not None and policy.name_matches.match(snap.shortname):
+    if policy.name_matches is not None and policy.name_matches.fullmatch(snap.shortname):
       keep_snap = True
 
     # keep count-based
