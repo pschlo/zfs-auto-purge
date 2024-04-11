@@ -50,10 +50,10 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
 
     # release snaps
     s = base_snap
-    if i != 0 or (i == 0 and source_cli.has_hold(s.fullname, source_tag)):
+    if i > 0 or source_cli.has_hold(s.fullname, source_tag):
       source_cli.release([s.fullname], source_tag)
     s = base_snap.with_dataset(dest_dataset)
-    if i != 0 or (i == 0 and dest_cli.has_hold(s.fullname, dest_tag)):
+    if i > 0 or dest_cli.has_hold(s.fullname, dest_tag):
       dest_cli.release([s.fullname], dest_tag)
 
   print(f'Transfer completed')
