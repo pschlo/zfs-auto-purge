@@ -44,10 +44,9 @@ def prune_snapshots(
     return
 
   print(f'Destroying snapshots')
-  # call destroy for each dataset
-  for _dataset, _snaps in group_snaps_by(destroy, lambda s: s.dataset).items():
+  for snap in destroy:
     try:
-      cli.destroy_snapshots(_dataset, {s.shortname for s in _snaps})
+      cli.destroy_snapshots(snap.dataset, [snap.shortname])
     except CalledProcessError as e:
       # ignore if destroy failed with code 1, e.g. because it was held
       if not e.returncode == 1:
