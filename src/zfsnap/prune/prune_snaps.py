@@ -50,8 +50,9 @@ def prune_snapshots(
       cli.destroy_snapshots(_dataset, {s.shortname for s in _snaps})
     except CalledProcessError as e:
       # ignore if destroy failed with code 1, e.g. because it was held
-      if e.returncode == 1: pass
-      raise
+      if not e.returncode == 1:
+        raise
+
 
 
 
