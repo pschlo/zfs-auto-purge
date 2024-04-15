@@ -30,19 +30,6 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
   dest_snaps = sorted(dest_cli.get_snapshots(dest_dataset), key=lambda s: s.timestamp, reverse=True)
 
-  # send oldest snap non-incrementally if dest is empty
-  if not dest_snaps:
-    snap = source_snaps[-1]
-    print(f'Destination does not have any snapshots. Transferring initial snapshot non-incrementally')
-    send_receive(
-      clis=(source_cli, dest_cli),
-      dest_dataset=dest_dataset,
-      snapshot=snap,
-      hold_tags=(source_tag, dest_tag)
-    )
-    print(f'Transfer of initial snapshot completed')
-    dest_snaps.append(snap.with_dataset(dest_dataset))
-
   base = get_base_index(source_snaps, dest_snaps)
   if base == 0:
     print(f'Source dataset does not have any new snapshots, nothing to do')
