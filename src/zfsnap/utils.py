@@ -1,4 +1,4 @@
-from typing import TypeVar, Callable
+from typing import TypeVar, Callable, Optional
 from collections.abc import Collection
 
 from .zfs import Snapshot

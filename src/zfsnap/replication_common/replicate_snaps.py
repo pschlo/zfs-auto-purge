@@ -1,10 +1,10 @@
 from __future__ import annotations
 from typing import Optional, cast
-from subprocess import CalledProcessError
 from collections.abc import Collection
 
 from ..zfs import Snapshot, ZfsCli
 from .get_base_index import get_base_index
+from .send_receive_snap import send_receive
 
 
 # TODO: raw send for encrypted datasets?
@@ -17,8 +17,31 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   Then D is a suffix of S, i.e. S[i:] = D for some i.
   We call this index i the base index. It is used as an incremental basis for sending snapshots S[:i].
   """
+  if not source_snaps:
+    print(f'No source snapshots given, nothing to do')
+    return
+
+  # --- determine hold tags ---
+  source_pool = source_cli.get_pool_from_dataset(next(iter(source_snaps)).dataset)
+  dest_pool = dest_cli.get_pool_from_dataset(dest_dataset)
+  source_tag = f'zfsnap-sendbase-{dest_pool.guid}'
+  dest_tag = f'zfsnap-recvbase-{source_pool.guid}'
+
   source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
   dest_snaps = sorted(dest_cli.get_snapshots(dest_dataset), key=lambda s: s.timestamp, reverse=True)
+
+  # send oldest snap non-incrementally if dest is empty
+  if not dest_snaps:
+    snap = source_snaps[-1]
+    print(f'Destination does not have any snapshots. Transferring initial snapshot non-incrementally')
+    send_receive(
+      clis=(source_cli, dest_cli),
+      dest_dataset=dest_dataset,
+      snapshot=snap,
+      hold_tags=(source_tag, dest_tag)
+    )
+    print(f'Transfer of initial snapshot completed')
+    dest_snaps.append(snap.with_dataset(dest_dataset))
 
   base = get_base_index(source_snaps, dest_snaps)
   if base == 0:
@@ -26,34 +49,14 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
     return
 
   print(f'Transferring {base} snapshots')
-
-  source_pool = source_cli.get_pool_from_dataset(source_snaps[0].dataset)
-  dest_pool = dest_cli.get_pool_from_dataset(dest_dataset)
-  source_tag = f'zfsnap-sendbase-{dest_pool.guid}'
-  dest_tag = f'zfsnap-recvbase-{source_pool.guid}'
-
-
   for i in range(base):
-    transfer_snap, base_snap = source_snaps[base-i-1: base-i+1]
-    source_cli.hold([transfer_snap.fullname], source_tag)
-
-    send_proc = source_cli.send_snapshot_async(transfer_snap.fullname, base_fullname=base_snap.fullname)
-    assert send_proc.stdout is not None
-    recv_proc = dest_cli.receive_snapshot_async(dest_dataset, stdin=send_proc.stdout)
-    for p in send_proc, recv_proc:
-      p.wait()
-      if p.returncode > 0:
-        raise CalledProcessError(p.returncode, cmd=p.args)
+    send_receive(
+      clis=(source_cli, dest_cli),
+      dest_dataset=dest_dataset,
+      hold_tags=(source_tag, dest_tag),
+      snapshot=source_snaps[base-i-1],
+      base=source_snaps[base-i],
+      unsafe_release=(i > 0)
+    )
     print(f'{i+1}/{base} transferred')
-
-    dest_cli.hold([transfer_snap.with_dataset(dest_dataset).fullname], dest_tag)
-
-    # release snaps
-    s = base_snap
-    if i > 0 or source_cli.has_hold(s.fullname, source_tag):
-      source_cli.release([s.fullname], source_tag)
-    s = base_snap.with_dataset(dest_dataset)
-    if i > 0 or dest_cli.has_hold(s.fullname, dest_tag):
-      dest_cli.release([s.fullname], dest_tag)
-
   print(f'Transfer completed')
