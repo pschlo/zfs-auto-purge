@@ -1,5 +1,6 @@
 from typing import Optional
 from subprocess import CalledProcessError
+import time
 
 from ..zfs import ZfsCli, Snapshot
 
@@ -18,8 +19,22 @@ def send_receive(
   send_proc = source_cli.send_snapshot_async(snapshot.fullname, base_fullname=base.fullname if base else None)
   assert send_proc.stdout is not None
   recv_proc = dest_cli.receive_snapshot_async(dest_dataset, stdin=send_proc.stdout)
+  
+  # wait for both processes to terminate
+  while True:
+    send_status, recv_status = send_proc.poll(), recv_proc.poll()
+    if send_status is not None and recv_status is not None:
+      # both terminated
+      break
+    if send_status is not None and send_status > 0:
+      # zfs send process died with error
+      recv_proc.terminate()
+    if recv_status is not None and recv_status > 0:
+      # zfs receive process died with error
+      send_proc.terminate()
+    time.sleep(0.1)
+
   for p in send_proc, recv_proc:
-    p.wait()
     if p.returncode > 0:
       raise CalledProcessError(p.returncode, cmd=p.args)
     
