@@ -3,14 +3,14 @@ from collections.abc import Collection
 from subprocess import CalledProcessError
 
 from ..zfs import Snapshot, ZfsCli
-from .policy import apply_policy, ExpirePolicy
+from .policy import apply_policy, KeepPolicy
 from ..utils import group_snaps_by
 
 
 def prune_snapshots(
   cli: ZfsCli,
   snapshots: Collection[Snapshot],
-  policy: ExpirePolicy,
+  policy: KeepPolicy,
   *,
   group_by: str = 'dataset',
   dry_run: bool = True,

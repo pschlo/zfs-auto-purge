@@ -3,7 +3,7 @@
 from __future__ import annotations
 from argparse import Namespace
 
-from .policy import ExpirePolicy
+from .policy import KeepPolicy
 from .prune_snaps import prune_snapshots
 from ..zfs import LocalZfsCli
 
@@ -11,9 +11,9 @@ from ..zfs import LocalZfsCli
 def entrypoint(args: Namespace):
 
   a: list[str] = args.tag or []
-  tag: set[frozenset[str]] = {frozenset(b.split(',')) for b in a}
+  filter_tags: set[frozenset[str]] = {frozenset(b.split(',')) for b in a}
 
-  policy = ExpirePolicy(
+  policy = KeepPolicy(
     last = args.keep_last,
     hourly = args.keep_hourly,
     daily = args.keep_daily,
@@ -28,8 +28,8 @@ def entrypoint(args: Namespace):
     within_monthly = args.keep_within_monthly,
     within_yearly = args.keep_within_yearly,
 
-    name_matches = args.keep_name_matches,
-    keep_tag = frozenset(args.keep_tag or [])
+    name = args.keep_name,
+    tags = frozenset(args.keep_tag or [])
   )
 
   cli = LocalZfsCli()
@@ -40,7 +40,7 @@ def entrypoint(args: Namespace):
   # snapshots are included iff all of their tags are included one of the groups in "tag"
   filtered_snaps = set()
   for snap in snapshots:
-    if any(snap.tags >= group for group in tag):
+    if any(snap.tags >= group for group in filter_tags):
       filtered_snaps.add(snap)
 
   prune_snapshots(cli, filtered_snaps, policy, dry_run=args.dry_run, group_by=args.group_by)

@@ -60,7 +60,7 @@ class BucketWithin:
 
 
 @dataclass
-class ExpirePolicy:
+class KeepPolicy:
   last: int = 0
   hourly: int = 0
   daily: int = 0
@@ -75,8 +75,8 @@ class ExpirePolicy:
   within_monthly: relativedelta = relativedelta()
   within_yearly: relativedelta = relativedelta()
 
-  name_matches: Optional[re.Pattern] = None
-  keep_tag: frozenset[str] = frozenset()
+  name: Optional[re.Pattern] = None
+  tags: frozenset[str] = frozenset()
 
 
 def unique_bucket(_: datetime) -> int:
@@ -102,7 +102,7 @@ def year_bucket(date: datetime) -> int:
 """
 Returns tuple (keep, destroy)
 """
-def apply_policy(snapshots: Collection[Snapshot], policy: ExpirePolicy) -> tuple[set[Snapshot], set[Snapshot]]:
+def apply_policy(snapshots: Collection[Snapshot], policy: KeepPolicy) -> tuple[set[Snapshot], set[Snapshot]]:
   # all snapshots, sorted from latest to oldest
   snaps = sorted(snapshots, key=lambda x: x.timestamp, reverse=True)
   keep: set[Snapshot] = set()
@@ -131,11 +131,11 @@ def apply_policy(snapshots: Collection[Snapshot], policy: ExpirePolicy) -> tuple
     keep_snap = False
 
     # keep matching name
-    if policy.name_matches is not None and policy.name_matches.fullmatch(snap.shortname):
+    if policy.name is not None and policy.name.fullmatch(snap.shortname):
       keep_snap = True
 
     # keep matching tag
-    for tag in policy.keep_tag:
+    for tag in policy.tags:
       if tag in snap.tags:
         keep_snap = True
 
