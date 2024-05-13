@@ -23,6 +23,7 @@ class Snapshot:
   tags: frozenset[str]
   timestamp: datetime
   guid: int
+  holds: int
 
   @property
   def longname(self):
@@ -35,11 +36,12 @@ class Snapshot:
       shortname=self.shortname,
       timestamp=self.timestamp,
       tags=self.tags,
-      guid=self.guid
+      guid=self.guid,
+      holds=self.holds
     )
 
   @staticmethod
-  def from_longname(longname: str, timestamp: datetime, guid: int) -> Snapshot:
+  def from_longname(longname: str, timestamp: datetime, guid: int, holds: int) -> Snapshot:
     dataset, name = longname.split(r'@')
     s = name.split(TAG_SEPARATOR)
     short_name, tags = s[0], frozenset(s[1:])
@@ -49,7 +51,8 @@ class Snapshot:
       shortname=short_name,
       tags=tags,
       timestamp=timestamp,
-      guid=guid
+      guid=guid,
+      holds=holds
     )
 
 
@@ -60,7 +63,7 @@ class Pool:
 
 @dataclass(eq=True, frozen=True)
 class Hold:
-  snapshot_fullname: str
+  snapshot_longname: str
   tag: str
 
 
@@ -94,14 +97,15 @@ class ZfsCli:
     lines = self.run_text_command(['zfs', 'holds', '-H', ' '.join(snapshots_fullnames)]).splitlines()
     holds: set[Hold] = set()
     for line in lines:
-      fields = line.split('\t')
+      snapname, tag = line.split('\t')
       holds.add(Hold(
-        snapshot_fullname=fields[0],
-        tag=fields[1]
+        snapshot_longname=snapname,
+        tag=tag
       ))
     return holds
   
   def has_hold(self, snapshot_fullname: str, tag: str) -> bool:
+    """Convenience method for checking if snapshot has hold with certain name"""
     return any((s.tag == tag for s in self.get_holds([snapshot_fullname])))
   
   def hold(self, snapshots_fullnames: Collection[str], tag: str) -> None:
@@ -124,7 +128,7 @@ class ZfsCli:
     self.run_text_command(cmd)
 
   def get_snapshots(self, dataset: Optional[str] = None, recursive: bool = False) -> set[Snapshot]:
-    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', 'name,creation,guid']
+    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', 'name,creation,guid,userrefs']
     if recursive:
       cmd += ['-r']
     if dataset:
@@ -133,11 +137,12 @@ class ZfsCli:
     snapshots: set[Snapshot] = set()
 
     for line in lines:
-      fields = line.split('\t')
+      name, creation, guid, userrefs = line.split('\t')
       snap = Snapshot.from_longname(
-        longname=fields[0],
-        timestamp=datetime.fromtimestamp(int(fields[1])),
-        guid=int(fields[2])
+        longname=name,
+        timestamp=datetime.fromtimestamp(int(creation)),
+        guid=int(guid),
+        holds=int(userrefs)
       )
       snapshots.add(snap)
 

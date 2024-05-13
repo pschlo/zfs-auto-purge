@@ -3,4 +3,4 @@ from argparse import ArgumentParser
 
 
 def setup_parser(parser: ArgumentParser) -> None:
-  ...
+  pass
