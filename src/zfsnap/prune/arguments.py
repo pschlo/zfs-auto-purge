@@ -34,3 +34,5 @@ def setup_parser(parser: ArgumentParser) -> None:
     parser.add_argument(opt, type=parse_duration, metavar="DURATION", default=relativedelta())
 
   parser.add_argument('--group-by', type=str, metavar='GROUP', choices={'', 'dataset'}, default='dataset')
+  parser.add_argument('--tag', type=str, action='append')
+  parser.add_argument('--keep-tag', type=str, action='append')

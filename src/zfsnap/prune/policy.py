@@ -76,6 +76,7 @@ class ExpirePolicy:
   within_yearly: relativedelta = relativedelta()
 
   name_matches: Optional[re.Pattern] = None
+  keep_tag: frozenset[str] = frozenset()
 
 
 def unique_bucket(_: datetime) -> int:
@@ -132,6 +133,11 @@ def apply_policy(snapshots: Collection[Snapshot], policy: ExpirePolicy) -> tuple
     # keep matching name
     if policy.name_matches is not None and policy.name_matches.fullmatch(snap.shortname):
       keep_snap = True
+
+    # keep matching tag
+    for tag in policy.keep_tag:
+      if tag in snap.tags:
+        keep_snap = True
 
     # keep count-based
     for bucket in buckets:

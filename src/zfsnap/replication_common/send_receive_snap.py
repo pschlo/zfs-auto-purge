@@ -16,7 +16,7 @@ def send_receive(
   source_cli, dest_cli = clis
   hold_tag_source, hold_tag_dest = hold_tags
 
-  send_proc = source_cli.send_snapshot_async(snapshot.fullname, base_fullname=base.fullname if base else None)
+  send_proc = source_cli.send_snapshot_async(snapshot.longname, base_fullname=base.longname if base else None)
   assert send_proc.stdout is not None
   recv_proc = dest_cli.receive_snapshot_async(dest_dataset, stdin=send_proc.stdout)
   
@@ -39,15 +39,15 @@ def send_receive(
       raise CalledProcessError(p.returncode, cmd=p.args)
     
   # hold snaps
-  source_cli.hold([snapshot.fullname], hold_tag_source)
-  dest_cli.hold([snapshot.with_dataset(dest_dataset).fullname], hold_tag_dest)
+  source_cli.hold([snapshot.longname], hold_tag_source)
+  dest_cli.hold([snapshot.with_dataset(dest_dataset).longname], hold_tag_dest)
 
   # release base snaps
   if base is None:
     return
   s = base
-  if unsafe_release or source_cli.has_hold(s.fullname, hold_tag_source):
-    source_cli.release([s.fullname], hold_tag_source)
+  if unsafe_release or source_cli.has_hold(s.longname, hold_tag_source):
+    source_cli.release([s.longname], hold_tag_source)
   s = base.with_dataset(dest_dataset)
-  if unsafe_release or dest_cli.has_hold(s.fullname, hold_tag_dest):
-    dest_cli.release([s.fullname], hold_tag_dest)
+  if unsafe_release or dest_cli.has_hold(s.longname, hold_tag_dest):
+    dest_cli.release([s.longname], hold_tag_dest)

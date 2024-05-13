@@ -7,23 +7,49 @@ from collections.abc import Collection
 from dataclasses import dataclass
 
 
+TAG_SEPARATOR = "_"
+
+
 @dataclass(eq=True, frozen=True)
 class Snapshot:
+  """Three different kinds of name:
+    - `name`: the part before the @, including tags
+    - `long_name`: the name including the @
+    - `short_name`: the name before the @ without tags
+  """
   dataset: str
+  name: str
   shortname: str
+  tags: frozenset[str]
   timestamp: datetime
   guid: int
 
   @property
-  def fullname(self):
-    return f'{self.dataset}@{self.shortname}'
+  def longname(self):
+    return f'{self.dataset}@{self.name}'
   
   def with_dataset(self, dataset: str) -> Snapshot:
     return Snapshot(
       dataset=dataset,
+      name=self.name,
       shortname=self.shortname,
       timestamp=self.timestamp,
+      tags=self.tags,
       guid=self.guid
+    )
+
+  @staticmethod
+  def from_longname(longname: str, timestamp: datetime, guid: int) -> Snapshot:
+    dataset, name = longname.split(r'@')
+    s = name.split(TAG_SEPARATOR)
+    short_name, tags = s[0], frozenset(s[1:])
+    return Snapshot(
+      dataset=dataset,
+      name=name,
+      shortname=short_name,
+      tags=tags,
+      timestamp=timestamp,
+      guid=guid
     )
 
 
@@ -108,12 +134,10 @@ class ZfsCli:
 
     for line in lines:
       fields = line.split('\t')
-      _dataset, _short_name = fields[0].split('@')
-      snap = Snapshot(
-        dataset = _dataset,
-        shortname = _short_name,
-        timestamp = datetime.fromtimestamp(int(fields[1])),
-        guid = int(fields[2])
+      snap = Snapshot.from_longname(
+        longname=fields[0],
+        timestamp=datetime.fromtimestamp(int(fields[1])),
+        guid=int(fields[2])
       )
       snapshots.add(snap)
 

@@ -10,6 +10,9 @@ from ..zfs import LocalZfsCli
 
 def entrypoint(args: Namespace):
 
+  a: list[str] = args.tag or []
+  tag: set[frozenset[str]] = {frozenset(b.split(',')) for b in a}
+
   policy = ExpirePolicy(
     last = args.keep_last,
     hourly = args.keep_hourly,
@@ -25,10 +28,19 @@ def entrypoint(args: Namespace):
     within_monthly = args.keep_within_monthly,
     within_yearly = args.keep_within_yearly,
 
-    name_matches = args.keep_name_matches
+    name_matches = args.keep_name_matches,
+    keep_tag = frozenset(args.keep_tag or [])
   )
 
   cli = LocalZfsCli()
 
   snapshots = cli.get_snapshots(dataset=args.dataset, recursive=args.recursive)
-  prune_snapshots(cli, snapshots, policy, dry_run=args.dry_run, group_by=args.group_by)
+
+  # filter for snapshots with tags
+  # snapshots are included iff all of their tags are included one of the groups in "tag"
+  filtered_snaps = set()
+  for snap in snapshots:
+    if any(snap.tags >= group for group in tag):
+      filtered_snaps.add(snap)
+
+  prune_snapshots(cli, filtered_snaps, policy, dry_run=args.dry_run, group_by=args.group_by)

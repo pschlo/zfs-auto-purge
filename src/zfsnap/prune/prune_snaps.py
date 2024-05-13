@@ -56,7 +56,7 @@ def prune_snapshots(
 
 
 def print_snap(snap: Snapshot):
-  print(f'    {snap.timestamp}  {snap.fullname}')
+  print(f'    {snap.timestamp}  {snap.longname}')
 
 def print_group(keep: Collection[Snapshot], destroy: Collection[Snapshot], group: Optional[str]=None):
   if group is not None:
