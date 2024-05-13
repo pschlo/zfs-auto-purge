@@ -20,10 +20,10 @@ def get_args() -> argparse.Namespace:
   parser.add_argument('-r', '--recursive', action='store_true')
 
   # create subcommand parsers
+  _list.setup_parser(subparsers.add_parser('list'))
   _create.setup_parser(subparsers.add_parser('create'))
   _prune.setup_parser(subparsers.add_parser('prune'))
   _push.setup_parser(subparsers.add_parser('push'))
   _pull.setup_parser(subparsers.add_parser('pull'))
-  _list.setup_parser(subparsers.add_parser('list'))
 
   return parser.parse_args()
