@@ -115,12 +115,12 @@ class ZfsCli:
     guid = self.run_text_command(['zpool', 'get', '-Hp', '-o', 'value', 'guid', name])
     return Pool(name=name, guid=int(guid))
 
-  def create_snapshot(self, dataset: str, short_name: str, recursive: bool = False) -> None:
-    full_name = f'{dataset}@{short_name}'
+  def create_snapshot(self, dataset: str, name: str, recursive: bool = False) -> None:
+    longname = f'{dataset}@{name}'
     cmd = ['zfs', 'snapshot']
     if recursive:
       cmd += ['-r']
-    cmd += [full_name]
+    cmd += [longname]
     self.run_text_command(cmd)
 
   def get_snapshots(self, dataset: Optional[str] = None, recursive: bool = False) -> set[Snapshot]:

@@ -20,7 +20,7 @@ def entrypoint(args: Namespace) -> None:
     snapname += f'_{tags_str}'
 
   print(f'Creating snapshot of "{dataset}"')
-  LocalZfsCli().create_snapshot(dataset=dataset, short_name=snapname, recursive=recursive)
+  LocalZfsCli().create_snapshot(dataset=dataset, name=snapname, recursive=recursive)
 
 
 def to_hex(num: int, digits: int) -> str:

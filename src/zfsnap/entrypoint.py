@@ -5,7 +5,8 @@ from . import (
   prune as _prune,
   create as _create,
   push as _push,
-  pull as _pull
+  pull as _pull,
+  list as _list
 )
 
 
@@ -23,5 +24,7 @@ def entrypoint() -> None:
     _push.entrypoint(args)
   elif s == 'pull':
     _pull.entrypoint(args)
+  elif s == 'list':
+    _list.entrypoint(args)
   else:
     assert False
