@@ -43,7 +43,7 @@ class Snapshot:
   @staticmethod
   def from_longname(longname: str, timestamp: datetime, guid: int, holds: int) -> Snapshot:
     dataset, name = longname.split(r'@')
-    s = name.split(TAG_SEPARATOR)
+    s = [a for a in name.split(TAG_SEPARATOR) if a]  # ignore empty tags
     short_name, tags = s[0], frozenset(s[1:])
     return Snapshot(
       dataset=dataset,
