@@ -15,6 +15,7 @@ class Field:
   name: str
   get: Callable[[Snapshot], str]
 
+# TODO: Use this list output for other subcommands as well
 
 def entrypoint(raw_args: Namespace) -> None:
   args = cast(Args, raw_args)
