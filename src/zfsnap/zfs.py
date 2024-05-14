@@ -3,7 +3,7 @@ from datetime import datetime
 import subprocess
 from subprocess import Popen, PIPE, CompletedProcess, CalledProcessError
 from typing import Optional, IO
-from collections.abc import Collection
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 
 
@@ -63,7 +63,7 @@ class Pool:
 
 @dataclass(eq=True, frozen=True)
 class Hold:
-  snapshot_longname: str
+  snap_longname: str
   tag: str
 
 
@@ -93,13 +93,13 @@ class ZfsCli:
     return self.start_command(cmd, stdin=stdin)
 
   # TrueNAS CORE 13.0 does not support holds -p, so we do not fetch timestamp
-  def get_holds(self, snapshots_fullnames: Collection[str]) -> set[Hold]:
-    lines = self.run_text_command(['zfs', 'holds', '-H', ' '.join(snapshots_fullnames)]).splitlines()
+  def get_holds(self, snapshots_fullnames: Iterable[str]) -> set[Hold]:
+    lines = self.run_text_command(['zfs', 'holds', '-H', *snapshots_fullnames]).splitlines()
     holds: set[Hold] = set()
     for line in lines:
-      snapname, tag = line.split('\t')
+      snapname, tag, _ = line.split('\t')
       holds.add(Hold(
-        snapshot_longname=snapname,
+        snap_longname=snapname,
         tag=tag
       ))
     return holds
