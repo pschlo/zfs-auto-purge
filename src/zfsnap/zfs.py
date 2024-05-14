@@ -117,7 +117,7 @@ class ZfsCli:
     dataset: Optional[str] = None,
     recursive: bool = False,
     sort_by: Optional[ZfsProperty] = None,
-    sort_order: Literal['ASCENDING', 'DESCENDING'] = 'ASCENDING'
+    sortorder: Literal['ASCENDING', 'DESCENDING'] = 'ASCENDING'
   ) -> list[Snapshot]:
     properties: list[str] = [
       ZfsProperty.NAME,
@@ -130,7 +130,7 @@ class ZfsCli:
     if recursive:
       cmd += ['-r']
     if sort_by is not None:
-      cmd += ['-s' if sort_order == 'ASCENDING' else '-S', sort_by]
+      cmd += ['-s' if sortorder == 'ASCENDING' else '-S', sort_by]
     if dataset:
       cmd += [dataset]
     lines = self.run_text_command(cmd).splitlines()
