@@ -158,6 +158,10 @@ class ZfsCli:
       snapshots.append(snap)
 
     return snapshots
+  
+  def set_tags(self, snap_fullname: str, tags: Collection[str]):
+    cmd = ['zfs', 'set', f"{ZfsProperty.CUSTOM_TAGS.value}={','.join(tags)}", snap_fullname]
+    self.run_text_command(cmd)
 
   def destroy_snapshots(self, dataset: str, snapshots_shortnames: Collection[str]) -> None:
     shortnames_str = ','.join(snapshots_shortnames)
