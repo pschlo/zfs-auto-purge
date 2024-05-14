@@ -14,13 +14,10 @@ def entrypoint(raw_args: Namespace) -> None:
     raise ValueError(f"No dataset provided")
   snapname: str = args.snapname or to_hex(random.getrandbits(64), 16)
 
-  # add tags
-  tags_str = '_'.join(args.tag)
-  if tags_str:
-    snapname += f'_{tags_str}'
-
   print(f'Creating snapshot of "{args.dataset}"')
-  LocalZfsCli().create_snapshot(dataset=args.dataset, name=snapname, recursive=args.recursive)
+  LocalZfsCli().create_snapshot(dataset=args.dataset, name=snapname, recursive=args.recursive, properties={
+    'zfsnap:tags': ','.join(args.tag)
+  })
 
 
 def to_hex(num: int, digits: int) -> str:

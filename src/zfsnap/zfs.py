@@ -13,12 +13,10 @@ TAG_SEPARATOR = "_"
 @dataclass(eq=True, frozen=True)
 class Snapshot:
   """Three different kinds of name:
-    - `name`: the part before the @, including tags
-    - `long_name`: the name including the @
-    - `short_name`: the name before the @ without tags
+    - `long_name`: shortname@dataset
+    - `short_name`: name without dataset
   """
   dataset: str
-  name: str
   shortname: str
   tags: frozenset[str]
   timestamp: datetime
@@ -27,32 +25,16 @@ class Snapshot:
 
   @property
   def longname(self):
-    return f'{self.dataset}@{self.name}'
+    return f'{self.dataset}@{self.shortname}'
   
   def with_dataset(self, dataset: str) -> Snapshot:
     return Snapshot(
       dataset=dataset,
-      name=self.name,
       shortname=self.shortname,
       timestamp=self.timestamp,
       tags=self.tags,
       guid=self.guid,
       holds=self.holds
-    )
-
-  @staticmethod
-  def from_longname(longname: str, timestamp: datetime, guid: int, holds: int) -> Snapshot:
-    dataset, name = longname.split(r'@')
-    s = [a for a in name.split(TAG_SEPARATOR) if a]  # ignore empty tags
-    short_name, tags = s[0], frozenset(s[1:])
-    return Snapshot(
-      dataset=dataset,
-      name=name,
-      shortname=short_name,
-      tags=tags,
-      timestamp=timestamp,
-      guid=guid,
-      holds=holds
     )
 
 
@@ -119,16 +101,18 @@ class ZfsCli:
     guid = self.run_text_command(['zpool', 'get', '-Hp', '-o', 'value', 'guid', name])
     return Pool(name=name, guid=int(guid))
 
-  def create_snapshot(self, dataset: str, name: str, recursive: bool = False) -> None:
+  def create_snapshot(self, dataset: str, name: str, recursive: bool = False, properties: dict[str, str] = dict()) -> None:
     longname = f'{dataset}@{name}'
     cmd = ['zfs', 'snapshot']
     if recursive:
       cmd += ['-r']
+    for property, value in properties.items():
+      cmd += ['-o', f'{property}={value}']
     cmd += [longname]
     self.run_text_command(cmd)
 
   def get_snapshots(self, dataset: Optional[str] = None, recursive: bool = False) -> set[Snapshot]:
-    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', 'name,creation,guid,userrefs']
+    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', 'name,creation,guid,userrefs,zfsnap:tags']
     if recursive:
       cmd += ['-r']
     if dataset:
@@ -137,12 +121,18 @@ class ZfsCli:
     snapshots: set[Snapshot] = set()
 
     for line in lines:
-      name, creation, guid, userrefs = line.split('\t')
-      snap = Snapshot.from_longname(
-        longname=name,
+      name, creation, guid, userrefs, tags = line.split('\t')
+      dataset, shortname = name.split('@')
+      # no tags
+      if tags == '-':
+        tags = ''
+      snap = Snapshot(
+        dataset=dataset,
+        shortname=shortname,
         timestamp=datetime.fromtimestamp(int(creation)),
         guid=int(guid),
-        holds=int(userrefs)
+        holds=int(userrefs),
+        tags=frozenset(tags.split(','))
       )
       snapshots.add(snap)
 
