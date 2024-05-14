@@ -1,16 +1,19 @@
 from __future__ import annotations
 from argparse import Namespace
-from typing import Optional
+from typing import Optional, cast
 import random
 
 from ..zfs import LocalZfsCli
+from .arguments import Args
 
 
-def entrypoint(args: Namespace) -> None:
+def entrypoint(raw_args: Namespace) -> None:
+  args = cast(Args, raw_args)
+
+  print(args.tag)
+
   if not args.dataset:
     raise ValueError(f"No dataset provided")
-  dataset: str = args.dataset
-  recursive: bool = args.recursive
   snapname: str = args.snapname or to_hex(random.getrandbits(64), 16)
   tags = args.tag or []
 
@@ -19,8 +22,8 @@ def entrypoint(args: Namespace) -> None:
   if tags_str:
     snapname += f'_{tags_str}'
 
-  print(f'Creating snapshot of "{dataset}"')
-  LocalZfsCli().create_snapshot(dataset=dataset, name=snapname, recursive=recursive)
+  print(f'Creating snapshot of "{args.dataset}"')
+  LocalZfsCli().create_snapshot(dataset=args.dataset, name=snapname, recursive=args.recursive)
 
 
 def to_hex(num: int, digits: int) -> str:

@@ -12,7 +12,7 @@ from .grouping import GroupType
 def entrypoint(raw_args: Namespace):
   args = cast(Args, raw_args)
 
-  filter_tags: set[frozenset[str]] = {frozenset(b.split(',')) for b in (args.tag or [])}
+  filter_tags: set[frozenset[str]] = {frozenset(b.split(',')) for b in args.tag}
 
   policy = KeepPolicy(
     last = args.keep_last,
@@ -30,7 +30,7 @@ def entrypoint(raw_args: Namespace):
     within_yearly = args.keep_within_yearly,
 
     name = args.keep_name,
-    tags = frozenset(args.keep_tag or [])
+    tags = frozenset(args.keep_tag)
   )
 
   cli = LocalZfsCli()

@@ -9,7 +9,7 @@ from ..arguments import Args as GeneralArgs
 
 @dataclass
 class Args(GeneralArgs):
-  tag: Optional[list[str]]
+  tag: list[str]
 
   keep_last: int
   keep_hourly: int
@@ -27,4 +27,4 @@ class Args(GeneralArgs):
 
   keep_name: re.Pattern
   group_by: str
-  keep_tag: Optional[list[str]]
+  keep_tag: list[str]

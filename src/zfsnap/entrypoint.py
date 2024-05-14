@@ -15,6 +15,7 @@ def entrypoint() -> None:
   subcommand = args.subcommand
   args.__delattr__('subcommand')
 
+  print(args.recursive)
   s = subcommand
   if s == 'prune':
     _prune.entrypoint(args)

@@ -1,9 +1,10 @@
 from __future__ import annotations
 from argparse import Namespace
-from typing import Optional, Callable
+from typing import Optional, Callable, cast
 from dataclasses import dataclass
 
 from ..zfs import LocalZfsCli, Snapshot, Hold
+from .arguments import Args
 
 
 COLUMN_SEPARATOR = ' | '
@@ -15,7 +16,9 @@ class Field:
   get: Callable[[Snapshot], str]
 
 
-def entrypoint(args: Namespace) -> None:
+def entrypoint(raw_args: Namespace) -> None:
+  args = cast(Args, raw_args)
+
   if not args.dataset:
     raise ValueError(f"No dataset provided")
   dataset: str = args.dataset
