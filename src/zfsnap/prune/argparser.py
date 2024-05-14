@@ -33,6 +33,6 @@ def setup(parser: ArgumentParser) -> None:
     parser.add_argument(opt, type=int, metavar="N", default=0)
   for opt in WITHIN_OPTS:
     parser.add_argument(opt, type=parse_duration, metavar="DURATION", default=relativedelta())
-  parser.add_argument('--keep-name', type=re.compile, metavar="REGEX", default=None)
+  parser.add_argument('--keep-name', type=re.compile, metavar="REGEX")
   parser.add_argument('--group-by', type=str, metavar='GROUP', choices={'', 'dataset'}, default='dataset')
   parser.add_argument('--keep-tag', type=str, action='append', default=[])
