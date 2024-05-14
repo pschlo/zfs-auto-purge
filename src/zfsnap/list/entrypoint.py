@@ -21,11 +21,9 @@ def entrypoint(raw_args: Namespace) -> None:
 
   if not args.dataset:
     raise ValueError(f"No dataset provided")
-  dataset: str = args.dataset
-  recursive: bool = args.recursive
 
   cli = LocalZfsCli()
-  snaps = sorted(cli.get_snapshots(dataset=dataset, recursive=recursive), key=lambda s: s.timestamp)
+  snaps = sorted(cli.get_snapshots(dataset=args.dataset, recursive=args.recursive), key=lambda s: s.timestamp)
 
   # get hold tags for all snapshots with holds
   snaps_to_holdtags: dict[str, set[str]] = {s.longname: set() for s in snaps}

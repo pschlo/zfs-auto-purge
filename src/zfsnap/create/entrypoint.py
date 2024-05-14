@@ -13,10 +13,9 @@ def entrypoint(raw_args: Namespace) -> None:
   if not args.dataset:
     raise ValueError(f"No dataset provided")
   snapname: str = args.snapname or to_hex(random.getrandbits(64), 16)
-  tags = args.tag or []
 
   # add tags
-  tags_str = '_'.join(tags)
+  tags_str = '_'.join(args.tag)
   if tags_str:
     snapname += f'_{tags_str}'
 
