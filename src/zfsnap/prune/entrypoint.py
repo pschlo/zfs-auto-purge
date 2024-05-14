@@ -3,7 +3,7 @@ from argparse import Namespace
 
 from .policy import KeepPolicy
 from .prune_snaps import prune_snapshots
-from ..zfs import LocalZfsCli
+from ..zfs import LocalZfsCli, Snapshot
 from .arguments import Args
 from typing import cast, Optional
 from .grouping import GroupType
@@ -38,11 +38,16 @@ def entrypoint(raw_args: Namespace):
   snapshots = cli.get_snapshots(dataset=args.dataset, recursive=args.recursive)
 
   # filter for snapshots with tags
-  # snapshots are included iff all of their tags are included one of the groups in "filter_tags"
-  filtered_snaps = set()
-  for snap in snapshots:
-    if any(snap.tags >= group for group in filter_tags):
-      filtered_snaps.add(snap)
+  # snapshots are included iff all of their tags are included in one of the groups in filter_tags
+  # if no filter_tags are given, snaps are not filtered
+  filtered_snaps: set[Snapshot]
+  if filter_tags:
+    filtered_snaps = set()
+    for snap in snapshots:
+      if any(snap.tags >= group for group in filter_tags):
+        filtered_snaps.add(snap)
+  else:
+    filtered_snaps = snapshots
 
   get_grouptype: dict[str, Optional[GroupType]] = {
     'dataset': GroupType.DATASET,
