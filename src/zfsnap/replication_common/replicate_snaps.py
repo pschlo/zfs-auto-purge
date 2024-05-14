@@ -29,7 +29,7 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
 
   # sorting is required
   source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
-  dest_snaps = dest_cli.get_snapshots(dest_dataset, sort_by=ZfsProperty.CREATION, sortorder='DESCENDING')
+  dest_snaps = dest_cli.get_snapshots(dest_dataset, sort_by=ZfsProperty.CREATION, reverse=True)
 
   base = get_base_index(source_snaps, dest_snaps)
   if base == 0:

@@ -3,6 +3,7 @@ from datetime import datetime
 from subprocess import Popen, PIPE, CalledProcessError
 from typing import Optional, IO, Literal
 from collections.abc import Collection, Iterable
+import dataclasses
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -13,7 +14,6 @@ class ZfsProperty(StrEnum):
   GUID = 'guid'
   USERREFS = 'userrefs'
   CUSTOM_TAGS = 'zfsnap:tags'  # the user property used to store and read tags
-
 
 
 @dataclass(eq=True, frozen=True)
@@ -30,14 +30,10 @@ class Snapshot:
     return f'{self.dataset}@{self.shortname}'
   
   def with_dataset(self, dataset: str) -> Snapshot:
-    return Snapshot(
-      dataset=dataset,
-      shortname=self.shortname,
-      timestamp=self.timestamp,
-      tags=self.tags,
-      guid=self.guid,
-      holds=self.holds
-    )
+    return dataclasses.replace(self, dataset=dataset)
+
+  def with_shortname(self, shortname: str) -> Snapshot:
+    return dataclasses.replace(self, shortname=shortname)
 
 
 @dataclass(eq=True, frozen=True)
@@ -60,7 +56,7 @@ class ZfsCli:
     stdout, _ = p.communicate()
     if p.returncode > 0:
       raise CalledProcessError(p.returncode, cmd=p.args, output=stdout)
-    return stdout.strip()
+    return stdout
   
   def start_command(self, cmd: list[str], stdin=None, stdout=None, stderr=None, text=False) -> Popen:
     return Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr, text=text)
@@ -103,52 +99,61 @@ class ZfsCli:
     guid = self.run_text_command(['zpool', 'get', '-Hp', '-o', 'value', 'guid', name])
     return Pool(name=name, guid=int(guid))
 
-  def create_snapshot(self, dataset: str, name: str, recursive: bool = False, properties: dict[ZfsProperty, str] = dict()) -> None:
-    longname = f'{dataset}@{name}'
+  def create_snapshot(self, fullname: str, recursive: bool = False, properties: dict[ZfsProperty, str] = dict()) -> None:
     cmd = ['zfs', 'snapshot']
     if recursive:
       cmd += ['-r']
     for property, value in properties.items():
       cmd += ['-o', f'{property}={value}']
-    cmd += [longname]
+    cmd += [fullname]
     self.run_text_command(cmd)
+  
+  def rename_snapshot(self, fullname: str, new_shortname: str) -> None:
+    cmd = ['zfs', 'rename', fullname, new_shortname]
+    self.run_text_command(cmd)
+
+  def get_snapshot(self, fullname: str) -> Snapshot:
+    P = ZfsProperty
+    cmd = ['zfs', 'get', '-Hp', '-o', 'value', ','.join(P), fullname]
+    lines = self.run_text_command(cmd).splitlines()
+    fields = {p: v if v != '-' else '' for p, v in zip(P, lines)}
+    dataset, shortname = fields[P.NAME].split('@')
+    return Snapshot(
+      dataset=dataset,
+      shortname=shortname,
+      timestamp=datetime.fromtimestamp(int(fields[P.CREATION])),
+      guid=int(fields[P.GUID]),
+      holds=int(fields[P.USERREFS]),
+      tags=frozenset(fields[P.CUSTOM_TAGS].split(','))
+    )
 
   def get_snapshots(self,
     dataset: Optional[str] = None,
     recursive: bool = False,
     sort_by: Optional[ZfsProperty] = None,
-    sortorder: Literal['ASCENDING', 'DESCENDING'] = 'ASCENDING'
+    reverse: bool = False
   ) -> list[Snapshot]:
-    properties: list[str] = [
-      ZfsProperty.NAME,
-      ZfsProperty.CREATION,
-      ZfsProperty.GUID,
-      ZfsProperty.USERREFS,
-      ZfsProperty.CUSTOM_TAGS
-    ]
-    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', ','.join(properties)]
+    P = ZfsProperty
+    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', ','.join(P)]
     if recursive:
       cmd += ['-r']
     if sort_by is not None:
-      cmd += ['-s' if sortorder == 'ASCENDING' else '-S', sort_by]
+      cmd += ['-s' if not reverse else '-S', sort_by]
     if dataset:
       cmd += [dataset]
     lines = self.run_text_command(cmd).splitlines()
-    snapshots: list[Snapshot] = []
 
+    snapshots: list[Snapshot] = []
     for line in lines:
-      name, creation, guid, userrefs, tags = line.split('\t')
-      dataset, shortname = name.split('@')
-      # no tags
-      if tags == '-':
-        tags = ''
+      fields = {p: v if v != '-' else '' for p, v in zip(P, line.split('\t'))}
+      dataset, shortname = fields[P.NAME].split('@')
       snap = Snapshot(
         dataset=dataset,
         shortname=shortname,
-        timestamp=datetime.fromtimestamp(int(creation)),
-        guid=int(guid),
-        holds=int(userrefs),
-        tags=frozenset(tags.split(','))
+        timestamp=datetime.fromtimestamp(int(fields[P.CREATION])),
+        guid=int(fields[P.GUID]),
+        holds=int(fields[P.GUID]),
+        tags=frozenset(fields[P.CUSTOM_TAGS].split(','))
       )
       snapshots.append(snap)
 

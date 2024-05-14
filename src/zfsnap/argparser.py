@@ -10,7 +10,6 @@ from . import (
 )
 
 
-
 def get_args() -> argparse.Namespace:
   # create top-level parser
   parser = argparse.ArgumentParser('zfsnap')

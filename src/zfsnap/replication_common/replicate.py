@@ -10,7 +10,7 @@ def replicate(source_cli: ZfsCli, source_dataset: str, dest_cli: ZfsCli, dest_da
     source_dataset,
     recursive=recursive,
     sort_by=ZfsProperty.CREATION,
-    sortorder='DESCENDING'
+    reverse=True
   )
   if recursive:
     replicate_hierarchy(source_cli, source_dataset, source_snaps, dest_cli, dest_dataset)
