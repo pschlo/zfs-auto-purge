@@ -1,11 +1,11 @@
 from __future__ import annotations
 from argparse import Namespace
+from typing import cast, Optional
 
+from ..zfs import LocalZfsCli, Snapshot
 from .policy import KeepPolicy
 from .prune_snaps import prune_snapshots
-from ..zfs import LocalZfsCli, Snapshot
 from .arguments import Args
-from typing import cast, Optional
 from .grouping import GroupType
 
 

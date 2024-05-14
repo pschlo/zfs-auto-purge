@@ -4,8 +4,8 @@ from typing import Optional, cast
 import random
 
 from ..zfs import LocalZfsCli
-from .arguments import Args
 from ..constants import TAGS_PROPERTY
+from .arguments import Args
 
 
 def entrypoint(raw_args: Namespace) -> None:

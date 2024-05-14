@@ -1,7 +1,6 @@
 from typing import Optional, Any
-from collections.abc import Collection, Callable, Mapping, Hashable
+from collections.abc import Collection
 from subprocess import CalledProcessError
-from enum import Enum, auto, StrEnum
 
 from ..zfs import Snapshot, ZfsCli
 from .policy import apply_policy, KeepPolicy

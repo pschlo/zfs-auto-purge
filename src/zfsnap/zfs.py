@@ -1,7 +1,6 @@
 from __future__ import annotations
 from datetime import datetime
-import subprocess
-from subprocess import Popen, PIPE, CompletedProcess, CalledProcessError
+from subprocess import Popen, PIPE, CalledProcessError
 from typing import Optional, IO
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass

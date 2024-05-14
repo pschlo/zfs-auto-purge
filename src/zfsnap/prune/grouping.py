@@ -1,6 +1,6 @@
 from typing import Optional, Any
-from collections.abc import Collection, Callable
-from enum import Enum, auto, StrEnum
+from collections.abc import Callable
+from enum import StrEnum
 
 from ..zfs import Snapshot
 
