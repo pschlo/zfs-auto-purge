@@ -1,7 +1,9 @@
 from __future__ import annotations
-from argparse import ArgumentParser
+from dataclasses import dataclass
+
+from ..arguments import Args as GeneralArgs
 
 
-def setup_parser(parser: ArgumentParser) -> None:
-  parser.add_argument('remote', metavar='USER@HOST:DATASET')
-  parser.add_argument('-p', '--port', type=int)
+@dataclass
+class Args(GeneralArgs):
+  ...

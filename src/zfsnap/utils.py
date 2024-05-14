@@ -1,16 +1,13 @@
 from typing import TypeVar, Callable, Optional
-from collections.abc import Collection
+from collections.abc import Collection, Hashable
 
 from .zfs import Snapshot
 
 
-T = TypeVar('T')
+T = TypeVar('T', bound=Hashable)
 
 def group_snaps_by(snapshots: Collection[Snapshot], group: Callable[[Snapshot], T]) -> dict[T, set[Snapshot]]:
-  a: dict[T, set[Snapshot]] = dict()
+  groups: dict[T, set[Snapshot]] = {group(s): set() for s in snapshots}
   for snap in snapshots:
-    g = group(snap)
-    if g not in a:
-      a[g] = set()
-    a[g].add(snap)
-  return a
+    groups[group(snap)].add(snap)
+  return groups

@@ -1,17 +1,18 @@
-#!/usr/bin/env python3
-
 from __future__ import annotations
 from argparse import Namespace
 
 from .policy import KeepPolicy
 from .prune_snaps import prune_snapshots
 from ..zfs import LocalZfsCli
+from .arguments import Args
+from typing import cast, Optional
+from .grouping import GroupType
 
 
-def entrypoint(args: Namespace):
+def entrypoint(raw_args: Namespace):
+  args = cast(Args, raw_args)
 
-  a: list[str] = args.tag or []
-  filter_tags: set[frozenset[str]] = {frozenset(b.split(',')) for b in a}
+  filter_tags: set[frozenset[str]] = {frozenset(b.split(',')) for b in (args.tag or [])}
 
   policy = KeepPolicy(
     last = args.keep_last,
@@ -37,10 +38,15 @@ def entrypoint(args: Namespace):
   snapshots = cli.get_snapshots(dataset=args.dataset, recursive=args.recursive)
 
   # filter for snapshots with tags
-  # snapshots are included iff all of their tags are included one of the groups in "tag"
+  # snapshots are included iff all of their tags are included one of the groups in "filter_tags"
   filtered_snaps = set()
   for snap in snapshots:
     if any(snap.tags >= group for group in filter_tags):
       filtered_snaps.add(snap)
 
-  prune_snapshots(cli, filtered_snaps, policy, dry_run=args.dry_run, group_by=args.group_by)
+  get_grouptype: dict[str, Optional[GroupType]] = {
+    'dataset': GroupType.DATASET,
+    '': None
+  }
+
+  prune_snapshots(cli, filtered_snaps, policy, dry_run=args.dry_run, group_by=get_grouptype[args.group_by])

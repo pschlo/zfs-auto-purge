@@ -1,2 +1,2 @@
-from .arguments import *
+from .argparser import *
 from .entrypoint import *

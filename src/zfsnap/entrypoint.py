@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .arguments import get_args
+from .argparser import get_args
 from . import (
   prune as _prune,
   create as _create,

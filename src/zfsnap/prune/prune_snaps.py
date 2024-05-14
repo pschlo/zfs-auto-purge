@@ -1,10 +1,12 @@
-from typing import Optional, Any, Mapping
-from collections.abc import Collection
+from typing import Optional, Any
+from collections.abc import Collection, Callable, Mapping, Hashable
 from subprocess import CalledProcessError
+from enum import Enum, auto, StrEnum
 
 from ..zfs import Snapshot, ZfsCli
 from .policy import apply_policy, KeepPolicy
 from ..utils import group_snaps_by
+from .grouping import GroupType, GET_GROUP
 
 
 def prune_snapshots(
@@ -12,7 +14,7 @@ def prune_snapshots(
   snapshots: Collection[Snapshot],
   policy: KeepPolicy,
   *,
-  group_by: str = 'dataset',
+  group_by: Optional[GroupType] = GroupType.DATASET,
   dry_run: bool = True,
 ) -> None:
   """
@@ -22,18 +24,22 @@ def prune_snapshots(
     print(f'No snapshots, nothing to do')
     return
 
-  groups = get_groups(group_by, snapshots)
-  s = f' {group_by}' if group_by else ''
-  print(f'Pruning {len(snapshots)} snapshots in {len(groups)}{s} groups')
-
-  keep: set[Snapshot] = set()
-  destroy: set[Snapshot] = set()
-  # loop over groups and apply policy to each group
-  for _group, _snaps in groups.items():
-    _keep, _destroy = apply_policy(_snaps, policy)
-    keep.update(_keep)
-    destroy.update(_destroy)
-    print_group(_keep, _destroy, _group)
+  if group_by is None:
+    print(f'Pruning {len(snapshots)} snapshots without grouping')
+    keep, destroy = apply_policy(snapshots, policy)
+    print_policy_result(keep, destroy)
+  else:
+    print(f'Pruning {len(snapshots)} snapshots, grouped by {group_by}')
+    # group the snapshots. Result is a dict with group name as key and set of snaps as value
+    groups = group_snaps_by(snapshots, GET_GROUP[group_by])
+    keep: set[Snapshot] = set()
+    destroy: set[Snapshot] = set()
+    for _group, _snaps in groups.items():
+      _keep, _destroy = apply_policy(_snaps, policy)
+      keep.update(_keep)
+      destroy.update(_destroy)
+      print(f'Group "{_group}"')
+      print_policy_result(_keep, _destroy)
 
   if not keep:
     raise RuntimeError(f"Refusing to destroy all snapshots")
@@ -47,20 +53,13 @@ def prune_snapshots(
   for snap in destroy:
     try:
       cli.destroy_snapshots(snap.dataset, [snap.shortname])
-    except CalledProcessError as e:
-      # ignore if destroy failed with code 1, e.g. because it was held
-      if not e.returncode == 1:
-        raise
+    except CalledProcessError:
+      print(f'Failed to destroy snapshot "{snap.longname}"')
 
 
 
 
-def print_snap(snap: Snapshot):
-  print(f'    {snap.timestamp}  {snap.longname}')
-
-def print_group(keep: Collection[Snapshot], destroy: Collection[Snapshot], group: Optional[str]=None):
-  if group is not None:
-    print(f'Group "{group}"')
+def print_policy_result(keep: Collection[Snapshot], destroy: Collection[Snapshot]):
   print(f'Keeping {len(keep)} snapshots')
   for snap in sorted(keep, key=lambda x: x.timestamp, reverse=True):
     print_snap(snap)
@@ -68,10 +67,5 @@ def print_group(keep: Collection[Snapshot], destroy: Collection[Snapshot], group
   for snap in sorted(destroy, key=lambda x: x.timestamp, reverse=True):
     print_snap(snap)
 
-def get_groups(group_type: str, snaps: Collection[Snapshot]) -> Mapping[Any, Collection[Snapshot]]:
-  if group_type == 'dataset':
-    return group_snaps_by(snaps, lambda s: s.dataset)
-  elif group_type == '':
-    return {None: snaps}
-  else:
-    assert False
+def print_snap(snap: Snapshot):
+  print(f'    {snap.timestamp}  {snap.longname}')

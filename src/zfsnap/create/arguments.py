@@ -1,7 +1,10 @@
 from __future__ import annotations
 from argparse import ArgumentParser
+from dataclasses import dataclass
+
+from ..arguments import Args as GeneralArgs
 
 
-def setup_parser(parser: ArgumentParser) -> None:
-  parser.add_argument('snapname', nargs='?', metavar='SNAPNAME')
-  parser.add_argument('-t', '--tag', action='append')
+@dataclass
+class Args(GeneralArgs):
+  ...

@@ -1,6 +1,9 @@
 from __future__ import annotations
-from argparse import ArgumentParser
+from dataclasses import dataclass
+
+from ..arguments import Args as GeneralArgs
 
 
-def setup_parser(parser: ArgumentParser) -> None:
-  pass
+@dataclass
+class Args(GeneralArgs):
+  ...
