@@ -11,10 +11,6 @@ from .constants import TAGS_PROPERTY
 
 @dataclass(eq=True, frozen=True)
 class Snapshot:
-  """Three different kinds of name:
-    - `long_name`: shortname@dataset
-    - `short_name`: name without dataset
-  """
   dataset: str
   shortname: str
   tags: frozenset[str]
