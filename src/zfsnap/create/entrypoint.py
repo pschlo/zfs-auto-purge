@@ -5,6 +5,7 @@ import random
 
 from ..zfs import LocalZfsCli
 from .arguments import Args
+from ..constants import TAGS_PROPERTY
 
 
 def entrypoint(raw_args: Namespace) -> None:
@@ -16,7 +17,7 @@ def entrypoint(raw_args: Namespace) -> None:
 
   print(f'Creating snapshot of "{args.dataset}"')
   LocalZfsCli().create_snapshot(dataset=args.dataset, name=snapname, recursive=args.recursive, properties={
-    'zfsnap:tags': ','.join(args.tag)
+    TAGS_PROPERTY: ','.join(args.tag)
   })
 
 

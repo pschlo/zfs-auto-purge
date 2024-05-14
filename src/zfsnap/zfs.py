@@ -6,8 +6,7 @@ from typing import Optional, IO
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 
-
-TAG_SEPARATOR = "_"
+from .constants import TAGS_PROPERTY
 
 
 @dataclass(eq=True, frozen=True)
@@ -112,7 +111,8 @@ class ZfsCli:
     self.run_text_command(cmd)
 
   def get_snapshots(self, dataset: Optional[str] = None, recursive: bool = False) -> set[Snapshot]:
-    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', 'name,creation,guid,userrefs,zfsnap:tags']
+    properties: list[str] = ['name', 'creation', 'guid', 'userrefs', TAGS_PROPERTY]
+    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', ','.join(properties)]
     if recursive:
       cmd += ['-r']
     if dataset:
