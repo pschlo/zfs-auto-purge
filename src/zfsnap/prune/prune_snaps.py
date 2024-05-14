@@ -28,7 +28,7 @@ def prune_snapshots(
     keep, destroy = apply_policy(snapshots, policy)
     print_policy_result(keep, destroy)
   else:
-    print(f'Pruning {len(snapshots)} snapshots, grouped by {group_by}')
+    print(f'Pruning {len(snapshots)} snapshots, grouped by {group_by.value}')
     # group the snapshots. Result is a dict with group name as key and set of snaps as value
     groups = group_snaps_by(snapshots, GET_GROUP[group_by])
     keep: list[Snapshot] = []

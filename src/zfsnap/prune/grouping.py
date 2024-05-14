@@ -1,11 +1,11 @@
 from typing import Optional, Any
 from collections.abc import Callable
-from enum import StrEnum
+from enum import Enum
 
 from ..zfs import Snapshot
 
 
-class GroupType(StrEnum):
+class GroupType(Enum):
   DATASET = 'dataset'
 
 

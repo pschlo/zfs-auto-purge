@@ -5,10 +5,10 @@ from typing import Optional, IO, Literal
 from collections.abc import Collection, Iterable
 import dataclasses
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import Enum
 
 
-class ZfsProperty(StrEnum):
+class ZfsProperty(Enum):
   NAME = 'name'
   CREATION = 'creation'
   GUID = 'guid'
@@ -104,7 +104,7 @@ class ZfsCli:
     if recursive:
       cmd += ['-r']
     for property, value in properties.items():
-      cmd += ['-o', f'{property}={value}']
+      cmd += ['-o', f'{property.value}={value}']
     cmd += [fullname]
     self.run_text_command(cmd)
   
@@ -114,7 +114,7 @@ class ZfsCli:
 
   def get_snapshot(self, fullname: str) -> Snapshot:
     P = ZfsProperty
-    cmd = ['zfs', 'get', '-Hp', '-o', 'value', ','.join(P), fullname]
+    cmd = ['zfs', 'get', '-Hp', '-o', 'value', ','.join(p.value for p in P), fullname]
     lines = self.run_text_command(cmd).splitlines()
     fields = {p: v if v != '-' else '' for p, v in zip(P, lines)}
     dataset, shortname = fields[P.NAME].split('@')
@@ -134,11 +134,11 @@ class ZfsCli:
     reverse: bool = False
   ) -> list[Snapshot]:
     P = ZfsProperty
-    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', ','.join(P)]
+    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', ','.join(p.value for p in P)]
     if recursive:
       cmd += ['-r']
     if sort_by is not None:
-      cmd += ['-s' if not reverse else '-S', sort_by]
+      cmd += ['-s' if not reverse else '-S', sort_by.value]
     if dataset:
       cmd += [dataset]
     lines = self.run_text_command(cmd).splitlines()
