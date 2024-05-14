@@ -101,9 +101,10 @@ def year_bucket(date: datetime) -> int:
 
 """
 Returns tuple (keep, destroy)
+Keeps snapshot ordering intact
 """
-def apply_policy(snapshots: Collection[Snapshot], policy: KeepPolicy) -> tuple[set[Snapshot], set[Snapshot]]:
-  # all snapshots, sorted from latest to oldest
+def apply_policy(snapshots: Collection[Snapshot], policy: KeepPolicy) -> tuple[list[Snapshot], list[Snapshot]]:
+  # all snapshots, sorted from latest to oldest. Sorting is important for the algorithm to work correctly.
   snaps = sorted(snapshots, key=lambda x: x.timestamp, reverse=True)
   keep: set[Snapshot] = set()
   destroy: set[Snapshot] = set()
@@ -166,4 +167,4 @@ def apply_policy(snapshots: Collection[Snapshot], policy: KeepPolicy) -> tuple[s
     else:
       destroy.add(snap)
 
-  return keep, destroy
+  return [s for s in snapshots if s in keep], [s for s in snapshots if s in destroy]

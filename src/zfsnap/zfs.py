@@ -1,11 +1,19 @@
 from __future__ import annotations
 from datetime import datetime
 from subprocess import Popen, PIPE, CalledProcessError
-from typing import Optional, IO
+from typing import Optional, IO, Literal
 from collections.abc import Collection, Iterable
 from dataclasses import dataclass
+from enum import StrEnum
 
-from .constants import TAGS_PROPERTY
+
+class ZfsProperty(StrEnum):
+  NAME = 'name'
+  CREATION = 'creation'
+  GUID = 'guid'
+  USERREFS = 'userrefs'
+  CUSTOM_TAGS = 'zfsnap:tags'  # the user property used to store and read tags
+
 
 
 @dataclass(eq=True, frozen=True)
@@ -95,7 +103,7 @@ class ZfsCli:
     guid = self.run_text_command(['zpool', 'get', '-Hp', '-o', 'value', 'guid', name])
     return Pool(name=name, guid=int(guid))
 
-  def create_snapshot(self, dataset: str, name: str, recursive: bool = False, properties: dict[str, str] = dict()) -> None:
+  def create_snapshot(self, dataset: str, name: str, recursive: bool = False, properties: dict[ZfsProperty, str] = dict()) -> None:
     longname = f'{dataset}@{name}'
     cmd = ['zfs', 'snapshot']
     if recursive:
@@ -105,15 +113,28 @@ class ZfsCli:
     cmd += [longname]
     self.run_text_command(cmd)
 
-  def get_snapshots(self, dataset: Optional[str] = None, recursive: bool = False) -> set[Snapshot]:
-    properties: list[str] = ['name', 'creation', 'guid', 'userrefs', TAGS_PROPERTY]
+  def get_snapshots(self,
+    dataset: Optional[str] = None,
+    recursive: bool = False,
+    sort_by: Optional[ZfsProperty] = None,
+    sort_order: Literal['ASCENDING', 'DESCENDING'] = 'ASCENDING'
+  ) -> list[Snapshot]:
+    properties: list[str] = [
+      ZfsProperty.NAME,
+      ZfsProperty.CREATION,
+      ZfsProperty.GUID,
+      ZfsProperty.USERREFS,
+      ZfsProperty.CUSTOM_TAGS
+    ]
     cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', ','.join(properties)]
     if recursive:
       cmd += ['-r']
+    if sort_by is not None:
+      cmd += ['-s' if sort_order == 'ASCENDING' else '-S', sort_by]
     if dataset:
       cmd += [dataset]
     lines = self.run_text_command(cmd).splitlines()
-    snapshots: set[Snapshot] = set()
+    snapshots: list[Snapshot] = []
 
     for line in lines:
       name, creation, guid, userrefs, tags = line.split('\t')
@@ -129,7 +150,7 @@ class ZfsCli:
         holds=int(userrefs),
         tags=frozenset(tags.split(','))
       )
-      snapshots.add(snap)
+      snapshots.append(snap)
 
     return snapshots
 

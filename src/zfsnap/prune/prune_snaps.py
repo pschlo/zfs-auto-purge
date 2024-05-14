@@ -31,12 +31,12 @@ def prune_snapshots(
     print(f'Pruning {len(snapshots)} snapshots, grouped by {group_by}')
     # group the snapshots. Result is a dict with group name as key and set of snaps as value
     groups = group_snaps_by(snapshots, GET_GROUP[group_by])
-    keep: set[Snapshot] = set()
-    destroy: set[Snapshot] = set()
+    keep: list[Snapshot] = []
+    destroy: list[Snapshot] = []
     for _group, _snaps in groups.items():
       _keep, _destroy = apply_policy(_snaps, policy)
-      keep.update(_keep)
-      destroy.update(_destroy)
+      keep += _keep
+      destroy += _destroy
       print(f'Group "{_group}"')
       print_policy_result(_keep, _destroy)
 
@@ -60,10 +60,10 @@ def prune_snapshots(
 
 def print_policy_result(keep: Collection[Snapshot], destroy: Collection[Snapshot]):
   print(f'Keeping {len(keep)} snapshots')
-  for snap in sorted(keep, key=lambda x: x.timestamp, reverse=True):
+  for snap in keep:
     print_snap(snap)
   print(f'Destroying {len(destroy)} snapshots')
-  for snap in sorted(destroy, key=lambda x: x.timestamp, reverse=True):
+  for snap in destroy:
     print_snap(snap)
 
 def print_snap(snap: Snapshot):

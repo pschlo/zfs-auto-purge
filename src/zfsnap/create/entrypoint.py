@@ -3,8 +3,7 @@ from argparse import Namespace
 from typing import Optional, cast
 import random
 
-from ..zfs import LocalZfsCli
-from ..constants import TAGS_PROPERTY
+from ..zfs import LocalZfsCli, ZfsProperty
 from .arguments import Args
 
 
@@ -16,9 +15,14 @@ def entrypoint(raw_args: Namespace) -> None:
   snapname: str = args.snapname or to_hex(random.getrandbits(64), 16)
 
   print(f'Creating snapshot of "{args.dataset}"')
-  LocalZfsCli().create_snapshot(dataset=args.dataset, name=snapname, recursive=args.recursive, properties={
-    TAGS_PROPERTY: ','.join(args.tag)
-  })
+  LocalZfsCli().create_snapshot(
+    dataset=args.dataset,
+    name=snapname,
+    recursive=args.recursive,
+    properties={
+      ZfsProperty.CUSTOM_TAGS: ','.join(args.tag)
+    }
+  )
 
 
 def to_hex(num: int, digits: int) -> str:

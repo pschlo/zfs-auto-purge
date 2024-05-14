@@ -3,7 +3,7 @@ from argparse import Namespace
 from typing import Optional, Callable, cast
 from dataclasses import dataclass
 
-from ..zfs import LocalZfsCli, Snapshot, Hold
+from ..zfs import LocalZfsCli, Snapshot, Hold, ZfsProperty
 from .arguments import Args
 
 
@@ -23,7 +23,7 @@ def entrypoint(raw_args: Namespace) -> None:
     raise ValueError(f"No dataset provided")
 
   cli = LocalZfsCli()
-  snaps = sorted(cli.get_snapshots(dataset=args.dataset, recursive=args.recursive), key=lambda s: s.timestamp)
+  snaps = cli.get_snapshots(dataset=args.dataset, recursive=args.recursive, sort_by=ZfsProperty.CREATION)
 
   # get hold tags for all snapshots with holds
   snaps_to_holdtags: dict[str, set[str]] = {s.longname: set() for s in snaps}

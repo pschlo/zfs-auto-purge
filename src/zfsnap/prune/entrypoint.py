@@ -2,7 +2,7 @@ from __future__ import annotations
 from argparse import Namespace
 from typing import cast, Optional
 
-from ..zfs import LocalZfsCli, Snapshot
+from ..zfs import LocalZfsCli, Snapshot, ZfsProperty
 from .policy import KeepPolicy
 from .prune_snaps import prune_snapshots
 from .arguments import Args
@@ -34,18 +34,17 @@ def entrypoint(raw_args: Namespace):
   )
 
   cli = LocalZfsCli()
-
-  snapshots = cli.get_snapshots(dataset=args.dataset, recursive=args.recursive)
+  snapshots = cli.get_snapshots(dataset=args.dataset, recursive=args.recursive, sort_by=ZfsProperty.CREATION)
 
   # filter for snapshots with tags
   # snapshots are included iff all of their tags are included in one of the groups in filter_tags
   # if no filter_tags are given, snaps are not filtered
-  filtered_snaps: set[Snapshot]
+  filtered_snaps: list[Snapshot]
   if filter_tags:
-    filtered_snaps = set()
+    filtered_snaps = []
     for snap in snapshots:
       if any(snap.tags >= group for group in filter_tags):
-        filtered_snaps.add(snap)
+        filtered_snaps.append(snap)
   else:
     filtered_snaps = snapshots
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Optional, cast
 from collections.abc import Collection
 
-from ..zfs import Snapshot, ZfsCli
+from ..zfs import Snapshot, ZfsCli, ZfsProperty
 from .get_base_index import get_base_index
 from .send_receive_snap import send_receive
 
@@ -27,8 +27,9 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   source_tag = f'zfsnap-sendbase-{dest_pool.guid}'
   dest_tag = f'zfsnap-recvbase-{source_pool.guid}'
 
+  # sorting is required
   source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
-  dest_snaps = sorted(dest_cli.get_snapshots(dest_dataset), key=lambda s: s.timestamp, reverse=True)
+  dest_snaps = dest_cli.get_snapshots(dest_dataset, sort_by=ZfsProperty.CREATION, sort_order='DESCENDING')
 
   base = get_base_index(source_snaps, dest_snaps)
   if base == 0:
