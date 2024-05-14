@@ -10,8 +10,6 @@ from .arguments import Args
 def entrypoint(raw_args: Namespace) -> None:
   args = cast(Args, raw_args)
 
-  print(args.tag)
-
   if not args.dataset:
     raise ValueError(f"No dataset provided")
   snapname: str = args.snapname or to_hex(random.getrandbits(64), 16)
