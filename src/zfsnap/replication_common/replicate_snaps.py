@@ -62,7 +62,7 @@ def release_obsolete_holds(cli: ZfsCli, snaps: list[Snapshot], holdtag: str):
 
   # determine hold tags for each snap
   holdtags = {s.longname: set() for s in snaps}
-  for h in cli.get_holds(s.longname for s in snaps):
+  for h in cli.get_holds(s.longname for s in snaps if s.holds > 0):
     holdtags[h.snap_longname].add(h.tag)
   
   # find latest snap with holdtag
