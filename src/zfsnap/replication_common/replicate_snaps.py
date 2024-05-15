@@ -22,9 +22,9 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
     return
 
   # --- determine hold tags ---
-  _dataset = dest_cli.get_pool_from_dataset(dest_dataset)
+  _dataset = dest_cli.get_dataset(dest_dataset)
   source_tag = f'zfsnap-sendbase-{_dataset.guid}'
-  _dataset = source_cli.get_pool_from_dataset(next(iter(source_snaps)).dataset)
+  _dataset = source_cli.get_dataset(next(iter(source_snaps)).dataset)
   dest_tag = f'zfsnap-recvbase-{_dataset.guid}'
 
   # sorting is required
