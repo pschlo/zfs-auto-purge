@@ -22,16 +22,21 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
     return
 
   # --- determine hold tags ---
-  source_pool = source_cli.get_pool_from_dataset(next(iter(source_snaps)).dataset)
-  dest_pool = dest_cli.get_pool_from_dataset(dest_dataset)
-  source_tag = f'zfsnap-sendbase-{dest_pool.guid}'
-  dest_tag = f'zfsnap-recvbase-{source_pool.guid}'
+  _dataset = dest_cli.get_pool_from_dataset(dest_dataset)
+  source_tag = f'zfsnap-sendbase-{_dataset.guid}'
+  _dataset = source_cli.get_pool_from_dataset(next(iter(source_snaps)).dataset)
+  dest_tag = f'zfsnap-recvbase-{_dataset.guid}'
 
   # sorting is required
   source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
   dest_snaps = dest_cli.get_snapshots(dest_dataset, sort_by=ZfsProperty.CREATION, reverse=True)
 
   base = get_base_index(source_snaps, dest_snaps)
+
+  # remove old hold tags that may have been left over for some reason
+  release_obsolete_holds(source_cli, source_snaps, source_tag)
+  release_obsolete_holds(dest_cli, dest_snaps, dest_tag)
+
   if base == 0:
     print(f'Source dataset does not have any new snapshots, nothing to do')
     return
@@ -47,4 +52,29 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
       unsafe_release=(i > 0)
     )
     print(f'{i+1}/{base} transferred')
+  dest_snaps = [s.with_dataset(dest_dataset) for s in source_snaps[:base]] + dest_snaps
   print(f'Transfer completed')
+
+
+
+def release_obsolete_holds(cli: ZfsCli, snaps: list[Snapshot], holdtag: str):
+  """Releases all but the latest holds"""
+
+  # determine hold tags for each snap
+  holdtags = {s.longname: set() for s in snaps}
+  for h in cli.get_holds(s.longname for s in snaps):
+    holdtags[h.snap_longname].add(h.tag)
+  
+  # find latest snap with holdtag
+  for i, snap in enumerate(snaps):
+    if holdtag in holdtags[snap.longname]:
+      latest_hold_snap = i
+      break
+  else:
+    # holdtag not set anywhere
+    return
+  
+  # remove holdtag from all older snaps
+  for snap in snaps[latest_hold_snap+1:]:
+    if holdtag in holdtags[snap.longname]:
+      cli.release([snap.longname], holdtag)

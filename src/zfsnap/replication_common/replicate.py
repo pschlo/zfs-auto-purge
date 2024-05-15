@@ -6,12 +6,7 @@ from .replicate_hierarchy import replicate_hierarchy
 
 
 def replicate(source_cli: ZfsCli, source_dataset: str, dest_cli: ZfsCli, dest_dataset: str, recursive: bool=False):
-  source_snaps = source_cli.get_snapshots(
-    source_dataset,
-    recursive=recursive,
-    sort_by=ZfsProperty.CREATION,
-    reverse=True
-  )
+  source_snaps = source_cli.get_snapshots(source_dataset, recursive=recursive, sort_by=ZfsProperty.CREATION, reverse=True)
   if recursive:
     replicate_hierarchy(source_cli, source_dataset, source_snaps, dest_cli, dest_dataset)
   else:

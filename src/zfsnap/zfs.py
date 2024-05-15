@@ -42,6 +42,11 @@ class Pool:
   guid: int
 
 @dataclass(eq=True, frozen=True)
+class Dataset:
+  name: str
+  guid: int
+
+@dataclass(eq=True, frozen=True)
 class Hold:
   snap_longname: str
   tag: str
@@ -98,6 +103,10 @@ class ZfsCli:
     name = dataset.split('/')[0]
     guid = self.run_text_command(['zpool', 'get', '-Hp', '-o', 'value', 'guid', name])
     return Pool(name=name, guid=int(guid))
+  
+  def get_dataset(self, name: str) -> Dataset:
+    guid = self.run_text_command(['zfs', 'get', '-Hp', '-o', 'value', 'guid', name])
+    return Dataset(name=name, guid=int(guid))
 
   def create_snapshot(self, fullname: str, recursive: bool = False, properties: dict[ZfsProperty, str] = dict()) -> None:
     cmd = ['zfs', 'snapshot']
