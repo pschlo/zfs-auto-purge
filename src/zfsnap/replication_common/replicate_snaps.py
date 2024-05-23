@@ -21,8 +21,8 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   all source_snaps must be of same dataset
 
   Let S and D be the snapshots on source and dest, newest first.
-  Then D is a suffix of S, i.e. S[i:] = D for some i.
-  We call this index i the base index. It is used as an incremental basis for sending snapshots S[:i].
+  Then D[0] = S[b] for some index b.
+  We call b the base index. It is used as an incremental basis for sending snapshots S[:b]
   """
   if not source_snaps:
     print(f'No source snapshots given, nothing to do')
@@ -31,20 +31,25 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   # sorting is required
   source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
 
-  # only initialize if dest dataset does not exist yet
-  initialize = initialize and all(dest_dataset != d.name for d in dest_cli.get_datasets())
+  # ensure dest dataset exists
+  dest_exists: bool = any(dest_dataset == d.name for d in dest_cli.get_datasets())
+  if not dest_exists:
+    if initialize:
+      print(f"Creating destination dataset by transferring the oldest snapshot")
+      send_receive_initial(
+        clis=(source_cli, dest_cli),
+        dest_dataset=dest_dataset,
+        snapshot=source_snaps[-1],
+        holdtags=(holdtag_src, holdtag_dest)
+      )
+    else:
+      raise RuntimeError(f'Destination dataset does not exists and will not be created')
 
-  # send over initial snapshot
-  if initialize:
-    print(f"Transferring initial snapshot")
-    send_receive_initial(
-      clis=(source_cli, dest_cli),
-      dest_dataset=dest_dataset,
-      snapshot=source_snaps[-1],
-      holdtags=(holdtag_src, holdtag_dest)
-    )
-
+  # get dest snaps
   dest_snaps = dest_cli.get_snapshots(dest_dataset, sort_by=ZfsProperty.CREATION, reverse=True)
+  if not dest_snaps:
+    raise RuntimeError(f'Destination dataset does not contain any snapshots')
+
   base = get_base_index(source_snaps, dest_snaps)
 
   # resolve hold tags
