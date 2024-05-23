@@ -21,9 +21,4 @@ def replicate_hierarchy(
     rel_dataset = abs_source_dataset.removeprefix(source_dataset_root)
     abs_dest_dataset = dest_dataset_root + rel_dataset
 
-    # only initialize new dest dataset if initial is True and the dataset does not exist yet
-    replicate_snaps(
-      source_cli, source_snaps,
-      dest_cli, abs_dest_dataset,
-      initialize=initialize and all(abs_dest_dataset != d.name for d in dest_cli.get_datasets())
-    )
+    replicate_snaps(source_cli, source_snaps, dest_cli, abs_dest_dataset, initialize=initialize)

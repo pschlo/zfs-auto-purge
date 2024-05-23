@@ -13,6 +13,8 @@ class ZfsProperty(Enum):
   CREATION = 'creation'
   GUID = 'guid'
   USERREFS = 'userrefs'
+  READONLY = 'readonly'
+  ATIME = 'atime'
   CUSTOM_TAGS = 'zfsnap:tags'  # the user property used to store and read tags
 
 
@@ -68,17 +70,20 @@ class ZfsCli:
   
   def send_snapshot_async(self, snapshot_fullname: str, base_fullname: Optional[str] = None) -> Popen[bytes]:
     cmd = ['zfs', 'send']
-    if base_fullname is not None:
+    if base_fullname:
       cmd += ['-i', base_fullname]
     cmd += [snapshot_fullname]
     return self.start_command(cmd, stdout=PIPE)
   
-  def receive_snapshot_async(self, dataset: str, stdin: IO[bytes]) -> Popen[bytes]:
-    cmd = ['zfs', 'receive', dataset]
+  def receive_snapshot_async(self, dataset: str, stdin: IO[bytes], properties: dict[ZfsProperty, str] = {}) -> Popen[bytes]:
+    cmd = ['zfs', 'receive']
+    for property, value in properties.items():
+      cmd += ['-o', f'{property.value}={value}']
+    cmd += [dataset]
     return self.start_command(cmd, stdin=stdin)
 
   # TrueNAS CORE 13.0 does not support holds -p, so we do not fetch timestamp
-  def get_holds(self, snapshots_fullnames: Iterable[str]) -> set[Hold]:
+  def get_holds(self, snapshots_fullnames: Collection[str]) -> set[Hold]:
     if not snapshots_fullnames:
       return set()
     lines = self.run_text_command(['zfs', 'holds', '-H', *snapshots_fullnames]).splitlines()

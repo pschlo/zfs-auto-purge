@@ -4,7 +4,7 @@ from collections.abc import Collection
 
 from ..zfs import Snapshot, ZfsCli, ZfsProperty
 from .get_base_index import get_base_index
-from .send_receive_snap import send_receive
+from .send_receive_snap import send_receive_incremental, send_receive_initial
 
 
 # TODO: raw send for encrypted datasets?
@@ -21,27 +21,33 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
     print(f'No source snapshots given, nothing to do')
     return
 
+  # sorting is required
+  source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
+
+  # only initialize if dest dataset does not exist yet
+  initialize = initialize and all(dest_dataset != d.name for d in dest_cli.get_datasets())
+
+  # send over initial snapshot
+  if initialize:
+    print(f"Transferring initial snapshot")
+    send_receive_initial(
+      clis=(source_cli, dest_cli),
+      dest_dataset=dest_dataset,
+      snapshot=source_snaps[-1],
+    )
+
   # --- determine hold tags ---
   _dataset = dest_cli.get_dataset(dest_dataset)
   source_tag = f'zfsnap-sendbase-{_dataset.guid}'
   _dataset = source_cli.get_dataset(next(iter(source_snaps)).dataset)
   dest_tag = f'zfsnap-recvbase-{_dataset.guid}'
 
-  # sorting is required
-  source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
-
-  # send over initial snapshot
-  if initialize:
-    print(f"Transferring initial snapshot")
-    send_receive(
-      clis=(source_cli, dest_cli),
-      dest_dataset=dest_dataset,
-      hold_tags=(source_tag, dest_tag),
-      snapshot=source_snaps[-1],
-    )
-
   dest_snaps = dest_cli.get_snapshots(dest_dataset, sort_by=ZfsProperty.CREATION, reverse=True)
   base = get_base_index(source_snaps, dest_snaps)
+
+  # hold initial snapshot
+  if initialize:
+    dest_cli.hold([dest_snaps[-1].longname], dest_tag)
 
   # remove old hold tags that may have been left over for some reason
   release_obsolete_holds(source_cli, source_snaps, source_tag)
@@ -53,7 +59,7 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
 
   print(f'Transferring {base} snapshots')
   for i in range(base):
-    send_receive(
+    send_receive_incremental(
       clis=(source_cli, dest_cli),
       dest_dataset=dest_dataset,
       hold_tags=(source_tag, dest_tag),
@@ -72,7 +78,7 @@ def release_obsolete_holds(cli: ZfsCli, snaps: list[Snapshot], holdtag: str):
 
   # determine hold tags for each snap
   holdtags = {s.longname: set() for s in snaps}
-  for h in cli.get_holds(s.longname for s in snaps if s.holds > 0):
+  for h in cli.get_holds([s.longname for s in snaps]):
     holdtags[h.snap_longname].add(h.tag)
   
   # find latest snap with holdtag

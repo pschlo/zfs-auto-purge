@@ -2,26 +2,22 @@ from typing import Optional
 from subprocess import CalledProcessError
 import time
 
-from ..zfs import ZfsCli, Snapshot
+from ..zfs import ZfsCli, Snapshot, ZfsProperty
 
 
-def send_receive(
+def _send_receive(
   clis: tuple[ZfsCli, ZfsCli],
   dest_dataset: str,
-  hold_tags: tuple[str,str],
   snapshot: Snapshot,
-  base: Optional[Snapshot]=None,
-  unsafe_release: bool=False
+  base: Optional[Snapshot],
+  properties: dict[ZfsProperty, str] = {}
 ) -> None:
   src_cli, dest_cli = clis
-  src_holdtag, dest_holdtag = hold_tags
-  src_snap, dest_snap = snapshot, snapshot.with_dataset(dest_dataset)
-  src_base, dest_base = base, base.with_dataset(dest_dataset) if base else None
-  del snapshot
 
-  send_proc = src_cli.send_snapshot_async(src_snap.longname, base_fullname=src_base.longname if src_base else None)
+  # create sending and receiving process
+  send_proc = src_cli.send_snapshot_async(snapshot.longname, base.longname if base else None)
   assert send_proc.stdout is not None
-  recv_proc = dest_cli.receive_snapshot_async(dest_dataset, stdin=send_proc.stdout)
+  recv_proc = dest_cli.receive_snapshot_async(dest_dataset, send_proc.stdout, properties)
   
   # wait for both processes to terminate
   while True:
@@ -37,21 +33,61 @@ def send_receive(
       send_proc.terminate()
     time.sleep(0.1)
 
+  # check exit codes
   for p in send_proc, recv_proc:
     if p.returncode > 0:
       raise CalledProcessError(p.returncode, cmd=p.args)
     
+  # set tags on dest snapshot
+  dest_cli.set_tags(snapshot.with_dataset(dest_dataset).longname, snapshot.tags)
+
+
+def send_receive_initial(
+  clis: tuple[ZfsCli, ZfsCli],
+  dest_dataset: str,
+  snapshot: Snapshot,
+) -> None:
+  _send_receive(
+    clis=clis,
+    dest_dataset=dest_dataset,
+    snapshot=snapshot,
+    base=None,
+    properties={
+      ZfsProperty.READONLY: 'on',
+      ZfsProperty.ATIME: 'off'
+    }
+  )
+  
+
+def send_receive_incremental(
+  clis: tuple[ZfsCli, ZfsCli],
+  dest_dataset: str,
+  hold_tags: tuple[str,str],
+  snapshot: Snapshot,
+  base: Optional[Snapshot]=None,
+  unsafe_release: bool=False
+) -> None:
+  _send_receive(
+    clis=clis,
+    dest_dataset=dest_dataset,
+    snapshot=snapshot,
+    base=base
+  )
+  
+  # (re)define own variables
+  src_cli, dest_cli = clis
+  src_holdtag, dest_holdtag = hold_tags
+  src_snap, dest_snap = snapshot, snapshot.with_dataset(dest_dataset)
+  src_base, dest_base = base, base.with_dataset(dest_dataset) if base else None
+  del clis, hold_tags, snapshot, base
+
   # hold snaps
   src_cli.hold([src_snap.longname], src_holdtag)
   dest_cli.hold([dest_snap.longname], dest_holdtag)
 
-  # set tags on dest snapshot
-  dest_cli.set_tags(dest_snap.longname, src_snap.tags)
-
   # release base snaps
-  if src_base is None or dest_base is None:
-    return
-  if unsafe_release or src_cli.has_hold(src_base.longname, src_holdtag):
-    src_cli.release([src_base.longname], src_holdtag)
-  if unsafe_release or dest_cli.has_hold(dest_base.longname, dest_holdtag):
-    dest_cli.release([dest_base.longname], dest_holdtag)
+  if src_base and dest_base:
+    if unsafe_release or src_cli.has_hold(src_base.longname, src_holdtag):
+      src_cli.release([src_base.longname], src_holdtag)
+    if unsafe_release or dest_cli.has_hold(dest_base.longname, dest_holdtag):
+      dest_cli.release([dest_base.longname], dest_holdtag)
