@@ -25,5 +25,6 @@ def entrypoint(raw_args: Namespace) -> None:
     source_dataset=local_dataset,
     dest_cli=remote_cli,
     dest_dataset=remote_dataset,
-    recursive=args.recursive
+    recursive=args.recursive,
+    initialize=args.init
   )

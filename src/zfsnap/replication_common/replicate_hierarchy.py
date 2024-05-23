@@ -8,14 +8,22 @@ from .replicate_snaps import replicate_snaps
 
 def replicate_hierarchy(
     source_cli: ZfsCli, source_dataset_root: str, source_snaps: Collection[Snapshot],
-    dest_cli: ZfsCli, dest_dataset_root: str
+    dest_cli: ZfsCli, dest_dataset_root: str,
+    initialize: bool
 ):
   """
   replicates given snaps under dest_dataset
   keeps the dataset hierarchy
   all source_snaps must be under source_dataset_root
   """
-  for dataset, snaps in group_snaps_by(source_snaps, lambda s: s.dataset).items():
-    assert dataset.startswith(source_dataset_root)
-    rel_dataset = dataset.removeprefix(source_dataset_root)
-    replicate_snaps(source_cli, snaps, dest_cli, dest_dataset_root + rel_dataset)
+  for abs_source_dataset, source_snaps in group_snaps_by(source_snaps, lambda s: s.dataset).items():
+    assert abs_source_dataset.startswith(source_dataset_root)
+    rel_dataset = abs_source_dataset.removeprefix(source_dataset_root)
+    abs_dest_dataset = dest_dataset_root + rel_dataset
+
+    # only initialize new dest dataset if initial is True and the dataset does not exist yet
+    replicate_snaps(
+      source_cli, source_snaps,
+      dest_cli, abs_dest_dataset,
+      initialize=initialize and all(abs_dest_dataset != d.name for d in dest_cli.get_datasets())
+    )

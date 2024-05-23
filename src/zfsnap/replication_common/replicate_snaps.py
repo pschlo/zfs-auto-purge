@@ -8,7 +8,7 @@ from .send_receive_snap import send_receive
 
 
 # TODO: raw send for encrypted datasets?
-def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest_cli: ZfsCli, dest_dataset: str):
+def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest_cli: ZfsCli, dest_dataset: str, initialize: bool):
   """
   replicates source_snaps to dest_dataset
   all source_snaps must be of same dataset
@@ -29,8 +29,18 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
 
   # sorting is required
   source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
-  dest_snaps = dest_cli.get_snapshots(dest_dataset, sort_by=ZfsProperty.CREATION, reverse=True)
 
+  # send over initial snapshot
+  if initialize:
+    print(f"Transferring initial snapshot")
+    send_receive(
+      clis=(source_cli, dest_cli),
+      dest_dataset=dest_dataset,
+      hold_tags=(source_tag, dest_tag),
+      snapshot=source_snaps[-1],
+    )
+
+  dest_snaps = dest_cli.get_snapshots(dest_dataset, sort_by=ZfsProperty.CREATION, reverse=True)
   base = get_base_index(source_snaps, dest_snaps)
 
   # remove old hold tags that may have been left over for some reason

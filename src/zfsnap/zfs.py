@@ -107,6 +107,22 @@ class ZfsCli:
   def get_dataset(self, name: str) -> Dataset:
     guid = self.run_text_command(['zfs', 'get', '-Hp', '-o', 'value', 'guid', name])
     return Dataset(name=name, guid=int(guid))
+  
+  def get_datasets(self) -> list[Dataset]:
+    P = ZfsProperty
+    cmd = ['zfs', 'list', '-Hp', '-o', ','.join(p.value for p in P)]
+    lines = self.run_text_command(cmd).splitlines()
+
+    datasets: list[Dataset] = []
+    for line in lines:
+      fields = {p: v if v != '-' else '' for p, v in zip(P, line.split('\t'))}
+      dataset = Dataset(
+        name=fields[P.NAME],
+        guid=int(fields[P.GUID])
+      )
+      datasets.append(dataset)
+  
+    return datasets
 
   def create_snapshot(self, fullname: str, recursive: bool = False, properties: dict[ZfsProperty, str] = dict()) -> None:
     cmd = ['zfs', 'snapshot']
