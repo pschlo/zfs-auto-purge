@@ -79,6 +79,8 @@ class ZfsCli:
 
   # TrueNAS CORE 13.0 does not support holds -p, so we do not fetch timestamp
   def get_holds(self, snapshots_fullnames: Iterable[str]) -> set[Hold]:
+    if not snapshots_fullnames:
+      return set()
     lines = self.run_text_command(['zfs', 'holds', '-H', *snapshots_fullnames]).splitlines()
     holds: set[Hold] = set()
     for line in lines:
@@ -94,10 +96,14 @@ class ZfsCli:
     return any((s.tag == tag for s in self.get_holds([snapshot_fullname])))
   
   def hold(self, snapshots_fullnames: Collection[str], tag: str) -> None:
-    self.run_text_command(['zfs', 'hold', tag, ' '.join(snapshots_fullnames)])
+    if not snapshots_fullnames:
+      return
+    self.run_text_command(['zfs', 'hold', tag, *snapshots_fullnames])
 
   def release(self, snapshots_fullnames: Collection[str], tag: str) -> None:
-    self.run_text_command(['zfs', 'release', tag, ' '.join(snapshots_fullnames)])
+    if not snapshots_fullnames:
+      return
+    self.run_text_command(['zfs', 'release', tag, *snapshots_fullnames])
 
   def get_pool_from_dataset(self, dataset: str) -> Pool:
     name = dataset.split('/')[0]
@@ -185,10 +191,14 @@ class ZfsCli:
     return snapshots
   
   def set_tags(self, snap_fullname: str, tags: Collection[str]):
+    if not tags:
+      return
     cmd = ['zfs', 'set', f"{ZfsProperty.CUSTOM_TAGS.value}={','.join(tags)}", snap_fullname]
     self.run_text_command(cmd)
 
   def destroy_snapshots(self, dataset: str, snapshots_shortnames: Collection[str]) -> None:
+    if not snapshots_shortnames:
+      return
     shortnames_str = ','.join(snapshots_shortnames)
     self.run_text_command(['zfs', 'destroy', f'{dataset}@{shortnames_str}'])
 
