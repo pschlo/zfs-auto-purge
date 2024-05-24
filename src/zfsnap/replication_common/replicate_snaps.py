@@ -55,8 +55,8 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   # resolve hold tags
   source_tag = holdtag_src(dest_cli.get_dataset(dest_dataset))
   dest_tag = holdtag_dest(source_cli.get_dataset(next(iter(source_snaps)).dataset))
-  release_obsolete_holds(source_cli, source_snaps, source_tag)
-  release_obsolete_holds(dest_cli, dest_snaps, dest_tag)
+
+  release_obsolete_holds((source_cli, dest_cli), (source_snaps, dest_snaps), (source_tag, dest_tag))
 
   if base == 0:
     print(f'Source dataset does not have any new snapshots, nothing to do')
@@ -78,24 +78,43 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
 
 
 
-def release_obsolete_holds(cli: ZfsCli, snaps: list[Snapshot], holdtag: str):
-  """Releases all but the latest holds"""
+def release_obsolete_holds(clis: tuple[ZfsCli,ZfsCli], snaps: tuple[list[Snapshot],list[Snapshot]], holdtags: tuple[str,str]):
+  """Finds the latest snapshot that exists on both sides and is held on both sides.
+  Remove holds from any older snaps."""
+  # find common snaps
+  common_guids = {s.guid for s in snaps[0]} & {s.guid for s in snaps[1]}
+  src_common_snaps = [(s,i) for i,s in enumerate(snaps[0]) if s.guid in common_guids]
+  dest_common_snaps = [(s,i) for i,s in enumerate(snaps[1]) if s.guid in common_guids]
 
-  # determine hold tags for each snap
-  holdtags = {s.longname: set() for s in snaps}
-  for h in cli.get_holds([s.longname for s in snaps]):
-    holdtags[h.snap_longname].add(h.tag)
-  
-  # find latest snap with holdtag
-  for i, snap in enumerate(snaps):
-    if holdtag in holdtags[snap.longname]:
-      latest_hold_snap = i
+  # get source holds
+  src_holds = {s.longname: set() for s in snaps[0]}
+  for h in clis[0].get_holds([s.longname for s in snaps[0]]):
+    src_holds[h.snap_longname].add(h.tag)
+
+  # get dest holds
+  dest_holds = {s.longname: set() for s in snaps[1]}
+  for h in clis[1].get_holds([s.longname for s in snaps[1]]):
+    dest_holds[h.snap_longname].add(h.tag)
+
+  # find index in source and dest of latest common snap with holdtags
+  for i in range(len(common_guids)):
+    src_snap, src_index = src_common_snaps[i]
+    dest_snap, dest_index = dest_common_snaps[i]
+    if holdtags[0] in src_holds[src_snap.longname] and holdtags[1] in dest_holds[dest_snap.longname]:
+      newest_common_snap = (src_index, dest_index)
       break
   else:
-    # holdtag not set anywhere
-    return
+    # no commonly held snap
+    newest_common_snap = (-1, -1)
+  
+  # print(f"Newest common snap is at indices {newest_common_snap}")
   
   # remove holdtag from all older snaps
-  for snap in snaps[latest_hold_snap+1:]:
-    if holdtag in holdtags[snap.longname]:
-      cli.release([snap.longname], holdtag)
+  src_release = [s.longname for s in snaps[0][newest_common_snap[0]+1:] if holdtags[0] in src_holds[s.longname]]
+  dest_release = [s.longname for s in snaps[1][newest_common_snap[1]+1:] if holdtags[1] in dest_holds[s.longname]]
+  if src_release:
+    print(f"Releasing {len(src_release)} obsolete holds in source")
+  if dest_release:
+    print(f"Releasing {len(dest_release)} obsolete holds in destination")
+  clis[0].release(src_release, holdtags[0])
+  clis[1].release(dest_release, holdtags[1])
