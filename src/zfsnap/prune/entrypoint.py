@@ -43,9 +43,7 @@ def entrypoint(raw_args: Namespace):
   if filter_tags:
     filtered_snaps = []
     for snap in snapshots:
-      if snap.tags is None:
-        print(f"WARNING: Snapshot {snap.longname} was created externally and will be excluded from tag filtering")
-      elif any(snap.tags >= group for group in filter_tags):
+      if snap.tags is not None and any(snap.tags >= group for group in filter_tags):
         filtered_snaps.append(snap)
   else:
     filtered_snaps = snapshots
