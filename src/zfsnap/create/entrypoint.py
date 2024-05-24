@@ -16,15 +16,12 @@ def entrypoint(raw_args: Namespace) -> None:
 
   cli = LocalZfsCli()
   
-  if args.snapname is not None:
-    fullname = f'{args.dataset}@{args.snapname}'
-  else:
-    # generate random 10 digit alnum string
-    #   10 digit alnum -> (26+26+10)^10 values = 839299365868340224 values = ca. 59.5 bit
-    #   ZFS GUID (64 bits) -> 2^64 values = 18446744073709551616 values
-    chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
-    shortname: str = ''.join(random.choices(chars, k=10))
-    fullname = f'{args.dataset}@{shortname}'
+  # generate random 10 digit alnum string
+  #   10 digit alnum -> (26+26+10)^10 values = 839299365868340224 values = ca. 59.5 bit
+  #   ZFS GUID (64 bits) -> 2^64 values = 18446744073709551616 values
+  chars = string.ascii_lowercase + string.ascii_uppercase + string.digits
+  shortname: str = ''.join(random.choices(chars, k=10))
+  fullname = f'{args.dataset}@{shortname}'
 
   cli.create_snapshot(
     fullname=fullname,

@@ -7,5 +7,4 @@ from ..arguments import Args as GeneralArgs
 
 @dataclass
 class Args(GeneralArgs):
-  snapname: Optional[str]
   tag: list[str]
