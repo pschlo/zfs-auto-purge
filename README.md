@@ -1,17 +1,17 @@
-# zfsnap
+# zfsnappr
 
 Simple tool for ZFS snapshots. Subcommands:
 
-* `zfsnap create`: Creates a new snapshot
-* `zfsnap prune`: Destroys snapshots based on a keep policy
-* `zfsnap push`: Pushes snapshots to a remote pool
-* `zfsnap pull`: Pulls snapshots from a remote pool
+* `zfsnappr create`: Creates a new snapshot
+* `zfsnappr prune`: Destroys snapshots based on a keep policy
+* `zfsnappr push`: Pushes snapshots to a remote pool
+* `zfsnappr pull`: Pulls snapshots from a remote pool
 
 ## Installation
 This package is not currently uploaded to PyPI. Install as follows:
 
-1. Find your release of choice [here](https://github.com/pschlo/zfsnap/releases)
-2. Copy the link to `zfsnap-x.x.x.tar.gz`
+1. Find your release of choice [here](https://github.com/pschlo/zfsnappr/releases)
+2. Copy the link to `zfsnappr-x.x.x.tar.gz`
 3. Run `python -m pip install {link}`
 
 You may also prepend a [direct reference](https://peps.python.org/pep-0440/#direct-references), which might be desirable for a `requirements.txt`.

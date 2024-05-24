@@ -15,7 +15,7 @@ class ZfsProperty(Enum):
   USERREFS = 'userrefs'
   READONLY = 'readonly'
   ATIME = 'atime'
-  CUSTOM_TAGS = 'zfsnap:tags'  # the user property used to store and read tags
+  CUSTOM_TAGS = 'zfsnappr:tags'  # the user property used to store and read tags
 
 
 @dataclass(eq=True, frozen=True)

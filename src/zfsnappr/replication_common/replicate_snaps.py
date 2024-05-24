@@ -8,10 +8,10 @@ from .send_receive_snap import send_receive_incremental, send_receive_initial
 
 
 def holdtag_src(dest_dataset: Dataset):
-  return f'zfsnap-sendbase-{dest_dataset.guid}'
+  return f'zfsnappr-sendbase-{dest_dataset.guid}'
 
 def holdtag_dest(src_dataset: Dataset):
-  return f'zfsnap-recvbase-{src_dataset.guid}'
+  return f'zfsnappr-recvbase-{src_dataset.guid}'
 
 
 # TODO: raw send for encrypted datasets?

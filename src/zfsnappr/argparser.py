@@ -12,7 +12,7 @@ from . import (
 
 def get_args() -> argparse.Namespace:
   # create top-level parser
-  parser = argparse.ArgumentParser('zfsnap')
+  parser = argparse.ArgumentParser('zfsnappr')
   subparsers = parser.add_subparsers(dest="subcommand", required=True)
   parser.add_argument('-d', '--dataset', type=str, metavar="DATASET")
   parser.add_argument('-r', '--recursive', action='store_true')
