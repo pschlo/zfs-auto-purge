@@ -136,9 +136,14 @@ def apply_policy(snapshots: Collection[Snapshot], policy: KeepPolicy) -> tuple[l
       keep_snap = True
 
     # keep matching tag
-    for tag in policy.tags:
-      if tag in snap.tags:
+    if policy.tags:
+      if snap.tags is None:
+        print(f"WARNING: Snapshot {snap.longname} was created externally and will be kept regardless of keep-tag policy")
         keep_snap = True
+      else:
+        for tag in policy.tags:
+          if tag in snap.tags:
+            keep_snap = True
 
     # keep count-based
     for bucket in buckets:

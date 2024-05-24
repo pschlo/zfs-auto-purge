@@ -22,7 +22,7 @@ class ZfsProperty(Enum):
 class Snapshot:
   dataset: str
   shortname: str
-  tags: frozenset[str]
+  tags: Optional[frozenset[str]]
   timestamp: datetime
   guid: int
   holds: int
@@ -152,7 +152,8 @@ class ZfsCli:
     P = ZfsProperty
     cmd = ['zfs', 'get', '-Hp', '-o', 'value', ','.join(p.value for p in P), fullname]
     lines = self.run_text_command(cmd).splitlines()
-    fields = {p: v if v != '-' else '' for p, v in zip(P, lines)}
+    fields = {p: v for p, v in zip(P, lines)}
+    assert fields[P.NAME] is not None
     dataset, shortname = fields[P.NAME].split('@')
     return Snapshot(
       dataset=dataset,
@@ -160,7 +161,7 @@ class ZfsCli:
       timestamp=datetime.fromtimestamp(int(fields[P.CREATION])),
       guid=int(fields[P.GUID]),
       holds=int(fields[P.USERREFS]),
-      tags=frozenset(fields[P.CUSTOM_TAGS].split(','))
+      tags=frozenset(fields[P.CUSTOM_TAGS].split(',')) if fields[P.CUSTOM_TAGS] != '-' else None
     )
 
   def get_snapshots(self,
@@ -189,7 +190,7 @@ class ZfsCli:
         timestamp=datetime.fromtimestamp(int(fields[P.CREATION])),
         guid=int(fields[P.GUID]),
         holds=int(fields[P.GUID]),
-        tags=frozenset(fields[P.CUSTOM_TAGS].split(','))
+        tags=frozenset(fields[P.CUSTOM_TAGS].split(',')) if fields[P.CUSTOM_TAGS] != '-' else None
       )
       snapshots.append(snap)
 

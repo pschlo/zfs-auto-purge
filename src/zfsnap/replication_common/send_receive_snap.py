@@ -42,7 +42,8 @@ def _send_receive(
       raise CalledProcessError(p.returncode, cmd=p.args)
     
   # set tags on dest snapshot
-  dest_cli.set_tags(snapshot.with_dataset(dest_dataset).longname, snapshot.tags)
+  if snapshot.tags is not None:
+    dest_cli.set_tags(snapshot.with_dataset(dest_dataset).longname, snapshot.tags)
 
   # hold snaps
   _hold(src_cli, snapshot, holdtags[0])
