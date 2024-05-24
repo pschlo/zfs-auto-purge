@@ -182,7 +182,7 @@ class ZfsCli:
 
     snapshots: list[Snapshot] = []
     for line in lines:
-      fields = {p: v if v != '-' else '' for p, v in zip(P, line.split('\t'))}
+      fields = {p: v for p, v in zip(P, line.split('\t'))}
       dataset, shortname = fields[P.NAME].split('@')
       snap = Snapshot(
         dataset=dataset,
