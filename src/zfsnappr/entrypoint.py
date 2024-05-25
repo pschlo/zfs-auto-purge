@@ -6,7 +6,8 @@ from . import (
   create as _create,
   push as _push,
   pull as _pull,
-  list as _list
+  list as _list,
+  tag as _tag
 )
 
 
@@ -26,5 +27,7 @@ def entrypoint() -> None:
     _pull.entrypoint(args)
   elif s == 'list':
     _list.entrypoint(args)
+  elif s == 'tag':
+    _tag.entrypoint(args)
   else:
     assert False

@@ -3,7 +3,6 @@ from typing import Optional, cast
 from collections.abc import Collection
 
 from ..zfs import Snapshot, ZfsCli, ZfsProperty, Dataset
-from .get_base_index import get_base_index
 from .send_receive_snap import send_receive_incremental, send_receive_initial
 
 
@@ -50,7 +49,10 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   if not dest_snaps:
     raise RuntimeError(f'Destination dataset does not contain any snapshots')
 
-  base = get_base_index(source_snaps, dest_snaps)
+  # figure out base index
+  base = next((i for i, s in enumerate(source_snaps) if s.guid == dest_snaps[0].guid), None)
+  if base is None:
+    raise RuntimeError(f'Latest destination snapshot "{dest_snaps[0].shortname}" does not exist on source dataset')
 
   # resolve hold tags
   source_tag = holdtag_src(dest_cli.get_dataset(dest_dataset))

@@ -6,7 +6,8 @@ from . import (
   create as _create,
   push as _push,
   pull as _pull,
-  list as _list
+  list as _list,
+  tag as _tag
 )
 
 
@@ -24,5 +25,6 @@ def get_args() -> argparse.Namespace:
   _prune.argparser.setup(subparsers.add_parser('prune'))
   _push.argparser.setup(subparsers.add_parser('push'))
   _pull.argparser.setup(subparsers.add_parser('pull'))
+  _tag.argparser.setup(subparsers.add_parser('tag'))
 
   return parser.parse_args()
