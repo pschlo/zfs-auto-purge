@@ -34,7 +34,7 @@ def entrypoint(raw_args: Namespace):
   )
 
   cli = LocalZfsCli()
-  snapshots = cli.get_snapshots(dataset=args.dataset, recursive=args.recursive, sort_by=ZfsProperty.CREATION)
+  snapshots = cli.get_all_snapshots(dataset=args.dataset, recursive=args.recursive, sort_by=ZfsProperty.CREATION)
 
   # filter for snapshots with tags
   # snapshots are included iff all of their tags are included in one of the groups in filter_tags

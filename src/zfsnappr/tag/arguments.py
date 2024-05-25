@@ -7,4 +7,6 @@ from ..arguments import Args as GeneralArgs
 
 @dataclass
 class Args(GeneralArgs):
-  tag: list[str]
+  set_from_prop: str
+  set_from_name: bool
+  snapshot: list[str]

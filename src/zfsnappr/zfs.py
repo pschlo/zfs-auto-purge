@@ -119,7 +119,7 @@ class ZfsCli:
     guid = self.run_text_command(['zfs', 'get', '-Hp', '-o', 'value', 'guid', name])
     return Dataset(name=name, guid=int(guid))
   
-  def get_datasets(self) -> list[Dataset]:
+  def get_all_datasets(self) -> list[Dataset]:
     P = ZfsProperty
     cmd = ['zfs', 'list', '-Hp', '-o', ','.join(p.value for p in P)]
     lines = self.run_text_command(cmd).splitlines()
@@ -148,23 +148,39 @@ class ZfsCli:
     cmd = ['zfs', 'rename', fullname, new_shortname]
     self.run_text_command(cmd)
 
-  def get_snapshot(self, fullname: str) -> Snapshot:
+  def get_snapshots(self, fullnames: Collection[str]) -> list[Snapshot]:
     P = ZfsProperty
-    cmd = ['zfs', 'get', '-Hp', '-o', 'value', ','.join(p.value for p in P), fullname]
-    lines = self.run_text_command(cmd).splitlines()
-    fields = {p: v for p, v in zip(P, lines)}
-    assert fields[P.NAME] is not None
-    dataset, shortname = fields[P.NAME].split('@')
-    return Snapshot(
-      dataset=dataset,
-      shortname=shortname,
-      timestamp=datetime.fromtimestamp(int(fields[P.CREATION])),
-      guid=int(fields[P.GUID]),
-      holds=int(fields[P.USERREFS]),
-      tags=frozenset(fields[P.CUSTOM_TAGS].split(',')) if fields[P.CUSTOM_TAGS] != '-' else None
-    )
+    if not fullnames:
+      return []
+    
+    snaps_to_props = self.get_snapshot_properties(fullnames, [p.value for p in P])
 
-  def get_snapshots(self,
+    snaps: list[Snapshot] = []
+    for fullname in fullnames:
+      dataset, shortname = fullname.split('@')
+      props = {P(p): v for p, v in snaps_to_props[fullname].items()}
+      snaps.append(Snapshot(
+        dataset=dataset,
+        shortname=shortname,
+        timestamp=datetime.fromtimestamp(int(props[P.CREATION])),
+        guid=int(props[P.GUID]),
+        holds=int(props[P.USERREFS]),
+        tags=frozenset(props[P.CUSTOM_TAGS].split(',')) if props[P.CUSTOM_TAGS] != '-' else None
+      ))
+
+    return snaps
+  
+  def get_snapshot_properties(self, fullnames: Collection[str], properties: Collection[str]) -> dict[str, dict[str,str]]:
+    if not fullnames:
+      return {}
+    cmd = ['zfs', 'get', '-Hp', '-o', 'value', ','.join(properties), *fullnames]
+    lines = self.run_text_command(cmd).splitlines()
+    res: dict[str, dict[str,str]] = {s: {} for s in fullnames}
+    for i, fullname in enumerate(fullnames):
+      res[fullname] = {p: v for p, v in zip(properties, lines[i*len(properties):(i+1)*len(properties)])}
+    return res
+
+  def get_all_snapshots(self,
     dataset: Optional[str] = None,
     recursive: bool = False,
     sort_by: Optional[ZfsProperty] = None,

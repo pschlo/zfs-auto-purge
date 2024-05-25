@@ -24,7 +24,7 @@ def entrypoint(raw_args: Namespace) -> None:
     raise ValueError(f"No dataset provided")
 
   cli = LocalZfsCli()
-  snaps = cli.get_snapshots(dataset=args.dataset, recursive=args.recursive, sort_by=ZfsProperty.CREATION)
+  snaps = cli.get_all_snapshots(dataset=args.dataset, recursive=args.recursive, sort_by=ZfsProperty.CREATION)
 
   # get hold tags for all snapshots with holds
   holdtags: dict[str, set[str]] = {s.longname: set() for s in snaps}

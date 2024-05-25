@@ -31,7 +31,7 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   source_snaps = sorted(source_snaps, key=lambda s: s.timestamp, reverse=True)
 
   # ensure dest dataset exists
-  dest_exists: bool = any(dest_dataset == d.name for d in dest_cli.get_datasets())
+  dest_exists: bool = any(dest_dataset == d.name for d in dest_cli.get_all_datasets())
   if not dest_exists:
     if initialize:
       print(f"Creating destination dataset by transferring the oldest snapshot")
@@ -45,7 +45,7 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
       raise RuntimeError(f'Destination dataset does not exists and will not be created')
 
   # get dest snaps
-  dest_snaps = dest_cli.get_snapshots(dest_dataset, sort_by=ZfsProperty.CREATION, reverse=True)
+  dest_snaps = dest_cli.get_all_snapshots(dest_dataset, sort_by=ZfsProperty.CREATION, reverse=True)
   if not dest_snaps:
     raise RuntimeError(f'Destination dataset does not contain any snapshots')
 
