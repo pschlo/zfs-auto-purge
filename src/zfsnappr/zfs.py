@@ -27,7 +27,7 @@ class Snapshot:
   shortname: str
   guid: int
   timestamp: datetime
-  tags: Optional[frozenset]
+  tags: Optional[set]
   holds: int
 
   def __init__(self, properties: dict[str,str]):
@@ -38,7 +38,7 @@ class Snapshot:
     self.dataset, self.shortname = ps[P.NAME].split('@')
     self.guid = int(ps[P.GUID])
     self.timestamp = datetime.fromtimestamp(int(ps[P.CREATION]))
-    self.tags = frozenset(ps[P.CUSTOM_TAGS].split(',')) if ps[P.CUSTOM_TAGS] != '-' else None
+    self.tags = set(ps[P.CUSTOM_TAGS].split(',')) if ps[P.CUSTOM_TAGS] != '-' else None
     self.holds = int(ps[P.USERREFS])
 
   def __repr__(self) -> str:
