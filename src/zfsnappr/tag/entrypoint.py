@@ -38,6 +38,10 @@ def entrypoint(raw_args: Namespace) -> None:
   if args.add_from_prop is not None:
     p = args.add_from_prop
     operations.append((lambda s: get_from_prop(s, p), 'ADD'))
+
+  if not operations:
+    print(f"No tag operations specified, nothing to do")
+    return
   
 
   # --- get snapshots ---
@@ -47,6 +51,10 @@ def entrypoint(raw_args: Namespace) -> None:
     # filter for snaps with given shortnames
     shortnames = set(args.snapshot)
     snapshots = [s for s in snapshots if s.shortname in shortnames]
+
+  if not snapshots:
+    print(f"No snapshots, nothing to do")
+    return
 
   # --- apply tag operations ---
   for snap in snapshots:
