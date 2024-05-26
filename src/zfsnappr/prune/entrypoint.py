@@ -3,6 +3,7 @@ from argparse import Namespace
 from typing import cast, Optional
 
 from ..zfs import LocalZfsCli, Snapshot, ZfsProperty
+from .. import filter
 from .policy import KeepPolicy
 from .prune_snaps import prune_snapshots
 from .arguments import Args
@@ -11,8 +12,6 @@ from .grouping import GroupType
 
 def entrypoint(raw_args: Namespace):
   args = cast(Args, raw_args)
-
-  filter_tags: set[frozenset[str]] = {frozenset(b.split(',')) for b in args.tag}
 
   policy = KeepPolicy(
     last = args.keep_last,
@@ -35,22 +34,11 @@ def entrypoint(raw_args: Namespace):
 
   cli = LocalZfsCli()
   snapshots = cli.get_all_snapshots(dataset=args.dataset, recursive=args.recursive, sort_by=ZfsProperty.CREATION)
-
-  # filter for snapshots with tags
-  # snapshots are included iff all of their tags are included in one of the groups in filter_tags
-  # if no filter_tags are given, snaps are not filtered
-  filtered_snaps: list[Snapshot]
-  if filter_tags:
-    filtered_snaps = []
-    for snap in snapshots:
-      if snap.tags is not None and any(snap.tags >= group for group in filter_tags):
-        filtered_snaps.append(snap)
-  else:
-    filtered_snaps = snapshots
+  snapshots = filter.filter_snaps(snapshots, tag=filter.parse_tags(args.tag))
 
   get_grouptype: dict[str, Optional[GroupType]] = {
     'dataset': GroupType.DATASET,
     '': None
   }
 
-  prune_snapshots(cli, filtered_snaps, policy, dry_run=args.dry_run, group_by=get_grouptype[args.group_by])
+  prune_snapshots(cli, snapshots, policy, dry_run=args.dry_run, group_by=get_grouptype[args.group_by])

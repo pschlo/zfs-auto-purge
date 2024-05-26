@@ -3,6 +3,7 @@ from argparse import Namespace
 from typing import Optional, cast, Literal, Callable
 
 from ..zfs import LocalZfsCli, ZfsProperty, ZfsCli, Snapshot
+from .. import filter
 from .arguments import Args
 
 
@@ -47,11 +48,7 @@ def entrypoint(raw_args: Namespace) -> None:
   # --- get snapshots ---
   props = [p for p in [args.add_from_prop, args.set_from_prop] if p is not None]
   snapshots = cli.get_all_snapshots(args.dataset, recursive=args.recursive, properties=props)
-  if args.snapshot:
-    # filter for snaps with given shortnames
-    shortnames = set(args.snapshot)
-    snapshots = [s for s in snapshots if s.shortname in shortnames]
-
+  snapshots = filter.filter_snaps(snapshots, tag=filter.parse_tags(args.tag), shortname=filter.parse_shortnames(args.snapshot))
   if not snapshots:
     print(f"No snapshots, nothing to do")
     return
@@ -60,7 +57,6 @@ def entrypoint(raw_args: Namespace) -> None:
   # SET sets the tags even if no new tags were found, while ADD and REMOVE leave the tags potentially unset, i.e. as None
   for snap in snapshots:
     for get_tags, action in operations:
-      print(f"{action} {snap.longname}: {get_tags.__name__}")
       tags = snap.tags
       new_tags = get_tags(snap)
 
@@ -70,9 +66,6 @@ def entrypoint(raw_args: Namespace) -> None:
         tags = (tags or set()) | new_tags
       elif action == 'REMOVE' and new_tags is not None:
         tags = (tags or set()) - new_tags
-
-      print(f"Old tags are: {snap.tags}")
-      print(f"New tags are: {tags}")
 
       # apply tag changes
       if tags != snap.tags and tags is not None:

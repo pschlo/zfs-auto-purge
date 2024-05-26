@@ -34,7 +34,7 @@ def entrypoint(raw_args: Namespace) -> None:
   fields: list[Field] = [
     Field('DATASET',    lambda s: s.dataset),
     Field('SHORT NAME', lambda s: s.shortname),
-    Field('TAGS',       lambda s: ','.join(s.tags) if s.tags is not None else 'NONE'),
+    Field('TAGS',       lambda s: ','.join(s.tags) if s.tags is not None else 'UNSET'),
     Field('TIMESTAMP',  lambda s: str(s.timestamp)),
     Field('HOLDS',      lambda s: ','.join(holdtags[s.longname]))
   ]
