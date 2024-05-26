@@ -2,13 +2,11 @@ from __future__ import annotations
 from datetime import datetime
 from subprocess import Popen, PIPE, CalledProcessError
 from typing import Optional, IO, Literal
-from collections.abc import Collection, Iterable
-import dataclasses
+from collections.abc import Collection
 from dataclasses import dataclass
-from enum import Enum
 
 
-class ZfsProperty(Enum):
+class ZfsProperty:
   NAME = 'name'
   CREATION = 'creation'
   GUID = 'guid'
@@ -18,24 +16,47 @@ class ZfsProperty(Enum):
   CUSTOM_TAGS = 'zfsnappr:tags'  # the user property used to store and read tags
 
 
-@dataclass(eq=True, frozen=True)
+# properties that will always be fetched
+REQUIRED_PROPS = [ZfsProperty.NAME, ZfsProperty.CREATION, ZfsProperty.GUID, ZfsProperty.CUSTOM_TAGS, ZfsProperty.USERREFS]
+
+
 class Snapshot:
+  properties: dict[str, str]
+
   dataset: str
   shortname: str
-  tags: Optional[frozenset[str]]
-  timestamp: datetime
   guid: int
+  timestamp: datetime
+  tags: Optional[frozenset]
   holds: int
+
+  def __init__(self, properties: dict[str,str]):
+    P = ZfsProperty
+    ps = properties
+
+    self.properties = ps
+    self.dataset, self.shortname = ps[P.NAME].split('@')
+    self.guid = int(ps[P.GUID])
+    self.timestamp = datetime.fromtimestamp(int(ps[P.CREATION]))
+    self.tags = frozenset(ps[P.CUSTOM_TAGS].split(',')) if ps[P.CUSTOM_TAGS] != '-' else None
+    self.holds = int(ps[P.USERREFS])
+
+  def __repr__(self) -> str:
+    return f"Snapshot({self.properties})"
 
   @property
   def longname(self):
     return f'{self.dataset}@{self.shortname}'
   
   def with_dataset(self, dataset: str) -> Snapshot:
-    return dataclasses.replace(self, dataset=dataset)
+    new_props = self.properties.copy()
+    new_props[ZfsProperty.NAME] = f"{dataset}@{self.shortname}"
+    return Snapshot(new_props)
 
   def with_shortname(self, shortname: str) -> Snapshot:
-    return dataclasses.replace(self, shortname=shortname)
+    new_props = self.properties.copy()
+    new_props[ZfsProperty.NAME] = f"{self.dataset}@{shortname}"
+    return Snapshot(new_props)
 
 
 @dataclass(eq=True, frozen=True)
@@ -43,10 +64,22 @@ class Pool:
   name: str
   guid: int
 
-@dataclass(eq=True, frozen=True)
 class Dataset:
+  properties: dict[str, str]
+
   name: str
   guid: int
+
+  def __init__(self, properties: dict[str,str]):
+    P = ZfsProperty
+    ps = properties
+
+    self.properties = ps
+    self.name = ps[P.NAME]
+    self.guid = int(ps[P.GUID])
+
+  def __repr__(self) -> str:
+    return f"Dataset({self.properties})"
 
 @dataclass(eq=True, frozen=True)
 class Hold:
@@ -75,10 +108,10 @@ class ZfsCli:
     cmd += [snapshot_fullname]
     return self.start_command(cmd, stdout=PIPE)
   
-  def receive_snapshot_async(self, dataset: str, stdin: IO[bytes], properties: dict[ZfsProperty, str] = {}) -> Popen[bytes]:
+  def receive_snapshot_async(self, dataset: str, stdin: IO[bytes], properties: dict[str, str] = {}) -> Popen[bytes]:
     cmd = ['zfs', 'receive']
     for property, value in properties.items():
-      cmd += ['-o', f'{property.value}={value}']
+      cmd += ['-o', f'{property}={value}']
     cmd += [dataset]
     return self.start_command(cmd, stdin=stdin)
 
@@ -115,32 +148,45 @@ class ZfsCli:
     guid = self.run_text_command(['zpool', 'get', '-Hp', '-o', 'value', 'guid', name])
     return Pool(name=name, guid=int(guid))
   
-  def get_dataset(self, name: str) -> Dataset:
-    guid = self.run_text_command(['zfs', 'get', '-Hp', '-o', 'value', 'guid', name])
-    return Dataset(name=name, guid=int(guid))
+  def get_datasets(self, names: Collection[str], properties: Collection[str] = []) -> list[Dataset]:
+    if not names:
+      return []
+    properties = list(dict.fromkeys(REQUIRED_PROPS + list(properties)))  # eliminate duplicates
+    
+    cmd = ['zfs', 'get', '-Hp', '-o', 'value', ','.join(properties), *names]
+    lines = self.run_text_command(cmd).splitlines()
+
+    datasets: list[Dataset] = []
+    for i in range(len(names)):
+      props = {p: v for p, v in zip(properties, lines[i*len(properties):(i+1)*len(properties)])}
+      datasets.append(Dataset(props))
+    return datasets
   
-  def get_all_datasets(self) -> list[Dataset]:
-    P = ZfsProperty
-    cmd = ['zfs', 'list', '-Hp', '-o', ','.join(p.value for p in P)]
+
+  def get_dataset(self, name: str, properties: Collection[str] = []) -> Dataset:
+    """Shorthand method"""
+    return next(iter(self.get_datasets([name])))
+
+  
+  def get_all_datasets(self, properties: Collection[str] = []) -> list[Dataset]:
+    properties = list(dict.fromkeys(REQUIRED_PROPS + list(properties)))  # eliminate duplicates
+
+    cmd = ['zfs', 'list', '-Hp', '-o', ','.join(properties)]
     lines = self.run_text_command(cmd).splitlines()
 
     datasets: list[Dataset] = []
     for line in lines:
-      fields = {p: v if v != '-' else '' for p, v in zip(P, line.split('\t'))}
-      dataset = Dataset(
-        name=fields[P.NAME],
-        guid=int(fields[P.GUID])
-      )
-      datasets.append(dataset)
+      props = {p: v for p, v in zip(properties, line.split('\t'))}
+      datasets.append(Dataset(props))
   
     return datasets
-
-  def create_snapshot(self, fullname: str, recursive: bool = False, properties: dict[ZfsProperty, str] = dict()) -> None:
+  
+  def create_snapshot(self, fullname: str, recursive: bool = False, properties: dict[str, str] = {}) -> None:
     cmd = ['zfs', 'snapshot']
     if recursive:
       cmd += ['-r']
     for property, value in properties.items():
-      cmd += ['-o', f'{property.value}={value}']
+      cmd += ['-o', f'{property}={value}']
     cmd += [fullname]
     self.run_text_command(cmd)
   
@@ -148,74 +194,50 @@ class ZfsCli:
     cmd = ['zfs', 'rename', fullname, new_shortname]
     self.run_text_command(cmd)
 
-  def get_snapshots(self, fullnames: Collection[str]) -> list[Snapshot]:
-    P = ZfsProperty
+  def get_snapshots(self, fullnames: Collection[str], properties: Collection[str]) -> list[Snapshot]:
     if not fullnames:
       return []
+    properties = list(dict.fromkeys(REQUIRED_PROPS + list(properties)))  # eliminate duplicates
     
-    snaps_to_props = self.get_snapshot_properties(fullnames, [p.value for p in P])
-
-    snaps: list[Snapshot] = []
-    for fullname in fullnames:
-      dataset, shortname = fullname.split('@')
-      props = {P(p): v for p, v in snaps_to_props[fullname].items()}
-      snaps.append(Snapshot(
-        dataset=dataset,
-        shortname=shortname,
-        timestamp=datetime.fromtimestamp(int(props[P.CREATION])),
-        guid=int(props[P.GUID]),
-        holds=int(props[P.USERREFS]),
-        tags=frozenset(props[P.CUSTOM_TAGS].split(',')) if props[P.CUSTOM_TAGS] != '-' else None
-      ))
-
-    return snaps
-  
-  def get_snapshot_properties(self, fullnames: Collection[str], properties: Collection[str]) -> dict[str, dict[str,str]]:
-    if not fullnames:
-      return {}
     cmd = ['zfs', 'get', '-Hp', '-o', 'value', ','.join(properties), *fullnames]
     lines = self.run_text_command(cmd).splitlines()
-    res: dict[str, dict[str,str]] = {s: {} for s in fullnames}
-    for i, fullname in enumerate(fullnames):
-      res[fullname] = {p: v for p, v in zip(properties, lines[i*len(properties):(i+1)*len(properties)])}
-    return res
+
+    snaps: list[Snapshot] = []
+    for i in range(len(fullnames)):
+      props = {p: v for p, v in zip(properties, lines[i*len(properties):(i+1)*len(properties)])}
+      snaps.append(Snapshot(props))
+    return snaps
 
   def get_all_snapshots(self,
     dataset: Optional[str] = None,
     recursive: bool = False,
-    sort_by: Optional[ZfsProperty] = None,
+    properties: Collection[str] = [],
+    sort_by: Optional[str] = None,
     reverse: bool = False
   ) -> list[Snapshot]:
-    P = ZfsProperty
-    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', ','.join(p.value for p in P)]
+    properties = list(dict.fromkeys(REQUIRED_PROPS + list(properties)))  # eliminate duplicates
+
+    cmd = ['zfs', 'list', '-Hp', '-t', 'snapshot', '-o', ','.join(properties)]
     if recursive:
       cmd += ['-r']
     if sort_by is not None:
-      cmd += ['-s' if not reverse else '-S', sort_by.value]
+      cmd += ['-s' if not reverse else '-S', sort_by]
     if dataset:
       cmd += [dataset]
     lines = self.run_text_command(cmd).splitlines()
 
     snapshots: list[Snapshot] = []
     for line in lines:
-      fields = {p: v for p, v in zip(P, line.split('\t'))}
-      dataset, shortname = fields[P.NAME].split('@')
-      snap = Snapshot(
-        dataset=dataset,
-        shortname=shortname,
-        timestamp=datetime.fromtimestamp(int(fields[P.CREATION])),
-        guid=int(fields[P.GUID]),
-        holds=int(fields[P.GUID]),
-        tags=frozenset(fields[P.CUSTOM_TAGS].split(',')) if fields[P.CUSTOM_TAGS] != '-' else None
-      )
-      snapshots.append(snap)
+      props = {p: v for p, v in zip(properties, line.split('\t'))}
+      snapshots.append(Snapshot(props))
 
     return snapshots
+
   
   def set_tags(self, snap_fullname: str, tags: Collection[str]):
     if not tags:
       return
-    cmd = ['zfs', 'set', f"{ZfsProperty.CUSTOM_TAGS.value}={','.join(tags)}", snap_fullname]
+    cmd = ['zfs', 'set', f"{ZfsProperty.CUSTOM_TAGS}={','.join(tags)}", snap_fullname]
     self.run_text_command(cmd)
 
   def destroy_snapshots(self, dataset: str, snapshots_shortnames: Collection[str]) -> None:

@@ -13,7 +13,7 @@ def _send_receive(
   snapshot: Snapshot,
   base: Optional[Snapshot],
   holdtags: tuple[Holdtag,Holdtag],
-  properties: dict[ZfsProperty, str] = {}
+  properties: dict[str, str] = {}
 ) -> None:
   src_cli, dest_cli = clis
 

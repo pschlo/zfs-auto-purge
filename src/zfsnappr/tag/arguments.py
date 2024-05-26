@@ -7,6 +7,10 @@ from ..arguments import Args as GeneralArgs
 
 @dataclass
 class Args(GeneralArgs):
-  set_from_prop: str
+  set_from_prop: Optional[str]
+  add_from_prop: Optional[str]
+
   set_from_name: bool
+  add_from_name: bool
+
   snapshot: list[str]
