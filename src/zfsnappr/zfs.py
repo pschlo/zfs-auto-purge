@@ -165,7 +165,7 @@ class ZfsCli:
 
   def get_dataset(self, name: str, properties: Collection[str] = []) -> Dataset:
     """Shorthand method"""
-    return next(iter(self.get_datasets([name])))
+    return next(iter(self.get_datasets([name], properties)))
 
   
   def get_all_datasets(self, properties: Collection[str] = []) -> list[Dataset]:
@@ -194,7 +194,7 @@ class ZfsCli:
     cmd = ['zfs', 'rename', fullname, new_shortname]
     self.run_text_command(cmd)
 
-  def get_snapshots(self, fullnames: Collection[str], properties: Collection[str]) -> list[Snapshot]:
+  def get_snapshots(self, fullnames: Collection[str], properties: Collection[str] = []) -> list[Snapshot]:
     if not fullnames:
       return []
     properties = list(dict.fromkeys(REQUIRED_PROPS + list(properties)))  # eliminate duplicates
