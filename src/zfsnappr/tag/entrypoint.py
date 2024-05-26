@@ -57,22 +57,26 @@ def entrypoint(raw_args: Namespace) -> None:
     return
 
   # --- apply tag operations ---
+  # SET sets the tags even if no new tags were found, while ADD and REMOVE leave the tags potentially unset, i.e. as None
   for snap in snapshots:
     for get_tags, action in operations:
+      print(f"{action} {snap.longname}: {get_tags.__name__}")
+      tags = snap.tags
       new_tags = get_tags(snap)
-      if new_tags is None:
-        continue  # no tags found
+
       if action == 'SET':
-        snap.tags = new_tags
-      elif action == 'ADD':
-        snap.tags = (snap.tags or set()) | new_tags
-      elif action == 'REMOVE':
-        snap.tags = (snap.tags or set()) - new_tags
-      else:
-        assert False
+        tags = new_tags or set()
+      elif action == 'ADD' and new_tags is not None:
+        tags = (tags or set()) | new_tags
+      elif action == 'REMOVE' and new_tags is not None:
+        tags = (tags or set()) - new_tags
+
+      print(f"Old tags are: {snap.tags}")
+      print(f"New tags are: {tags}")
 
       # apply tag changes
-      cli.set_tags(snap.longname, snap.tags)
+      if tags != snap.tags and tags is not None:
+        cli.set_tags(snap.longname, tags)
 
 
 
@@ -81,7 +85,7 @@ def get_from_prop(snap: Snapshot, property: str) -> Optional[set[str]]:
   if value == '-':
     # property not set
     return None
-  return set(value.split(','))
+  return set(t for t in value.split(',') if t)  # ignore empty tags
 
 def get_from_name(snap: Snapshot) -> Optional[set[str]]:
   s = [a for a in snap.shortname.split(TAG_SEPARATOR) if a]  # ignore empty tags

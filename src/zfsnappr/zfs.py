@@ -27,7 +27,7 @@ class Snapshot:
   shortname: str
   guid: int
   timestamp: datetime
-  tags: Optional[set]
+  tags: Optional[set[str]]
   holds: int
 
   def __init__(self, properties: dict[str,str]):
@@ -38,8 +38,12 @@ class Snapshot:
     self.dataset, self.shortname = ps[P.NAME].split('@')
     self.guid = int(ps[P.GUID])
     self.timestamp = datetime.fromtimestamp(int(ps[P.CREATION]))
-    self.tags = set(ps[P.CUSTOM_TAGS].split(',')) if ps[P.CUSTOM_TAGS] != '-' else None
     self.holds = int(ps[P.USERREFS])
+
+    if ps[P.CUSTOM_TAGS] == '-':
+      self.tags = None
+    else:
+      self.tags = set(t for t in ps[P.CUSTOM_TAGS].split(',') if t)  # ignore empty tags
 
   def __repr__(self) -> str:
     return f"Snapshot({self.properties})"
@@ -235,8 +239,6 @@ class ZfsCli:
 
   
   def set_tags(self, snap_fullname: str, tags: Collection[str]):
-    if not tags:
-      return
     cmd = ['zfs', 'set', f"{ZfsProperty.CUSTOM_TAGS}={','.join(tags)}", snap_fullname]
     self.run_text_command(cmd)
 
