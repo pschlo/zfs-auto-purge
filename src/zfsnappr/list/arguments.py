@@ -6,4 +6,4 @@ from ..arguments import Args as GeneralArgs
 
 @dataclass
 class Args(GeneralArgs):
-  ...
+  tag: list[str]

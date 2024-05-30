@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from ..zfs import LocalZfsCli, Snapshot, Hold, ZfsProperty
 from .arguments import Args
+from ..filter import filter_snaps, parse_tags
 
 
 COLUMN_SEPARATOR = ' | '
@@ -25,6 +26,7 @@ def entrypoint(raw_args: Namespace) -> None:
 
   cli = LocalZfsCli()
   snaps = cli.get_all_snapshots(dataset=args.dataset, recursive=args.recursive, sort_by=ZfsProperty.CREATION)
+  snaps = filter_snaps(snaps, tag=parse_tags(args.tag))
 
   # get hold tags for all snapshots with holds
   holdtags: dict[str, set[str]] = {s.longname: set() for s in snaps}
