@@ -7,7 +7,8 @@ from . import (
   push as _push,
   pull as _pull,
   list as _list,
-  tag as _tag
+  tag as _tag,
+  version as _version
 )
 
 
@@ -29,5 +30,7 @@ def entrypoint() -> None:
     _list.entrypoint(args)
   elif s == 'tag':
     _tag.entrypoint(args)
+  elif s == 'version':
+    _version.entrypoint(args)
   else:
     assert False
