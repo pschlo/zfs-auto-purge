@@ -46,19 +46,10 @@ def _send_receive(
     dest_cli.set_tags(snapshot.with_dataset(dest_dataset).longname, snapshot.tags)
 
   # hold snaps
-  _hold(src_cli, snapshot, holdtags[0])
-  _hold(dest_cli, snapshot.with_dataset(dest_dataset), holdtags[1])
-  
-
-
-def _hold(cli: ZfsCli, snap: Snapshot, holdtag: Holdtag):
-  tag = holdtag if isinstance(holdtag, str) else holdtag(cli.get_dataset(snap.dataset))
-  cli.hold([snap.longname], tag)
-
-def _release(cli: ZfsCli, snap: Snapshot, holdtag: Holdtag, unsafe: bool=False):
-  tag = holdtag if isinstance(holdtag, str) else holdtag(cli.get_dataset(snap.dataset))
-  if unsafe or cli.has_hold(snap.longname, tag):
-    cli.release([snap.longname], tag)
+  src_tag = holdtags[0] if isinstance(holdtags[0], str) else holdtags[0](dest_cli.get_dataset(dest_dataset))
+  dest_tag = holdtags[1] if isinstance(holdtags[1], str) else holdtags[1](src_cli.get_dataset(snapshot.dataset))
+  src_cli.hold([snapshot.longname], src_tag)
+  dest_cli.hold([snapshot.with_dataset(dest_dataset).longname], dest_tag)
 
 
 
@@ -98,5 +89,9 @@ def send_receive_incremental(
   )
   # release base snaps
   if base:
-    _release(clis[0], base, holdtags[0], unsafe=unsafe_release)
-    _release(clis[1], base.with_dataset(dest_dataset), holdtags[1], unsafe=unsafe_release)
+    s = base.longname
+    if unsafe_release or clis[0].has_hold(s, holdtags[0]):
+      clis[0].release([s], holdtags[0])
+    s = base.with_dataset(dest_dataset).longname
+    if unsafe_release or clis[1].has_hold(s, holdtags[1]):
+      clis[1].release([s], holdtags[1])
