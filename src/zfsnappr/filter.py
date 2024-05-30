@@ -24,13 +24,18 @@ def filter_snaps(
   for snap in snapshots:
     keep = True
 
-    # snap is included iff all of its tags are included in one of the groups in "tag"
+    # snap is included iff it has all the tags of one of the groups in "tag"
     if tag is not None:
       for tag_group in tag:
         tag_group = set(tag_group)
+        # normal case: snap has all group tags
         if snap.tags is not None and snap.tags >= tag_group:
           break
+        # snap tags are unset and group contains UNSET
         if snap.tags is None and len(tag_group) == 1 and next(iter(tag_group)) == 'UNSET':
+          break
+        # snap tags are empty and group contains empty tag
+        if snap.tags == set() and len(tag_group) == 1 and next(iter(tag_group)) == '':
           break
       else:
         keep = False
