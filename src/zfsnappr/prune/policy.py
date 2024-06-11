@@ -6,8 +6,12 @@ import random
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import re
+import logging
 
 from ..zfs import Snapshot
+
+
+log = logging.getLogger(__name__)
 
 
 class ParseError(Exception):
@@ -138,7 +142,7 @@ def apply_policy(snapshots: Collection[Snapshot], policy: KeepPolicy) -> tuple[l
     # keep matching tag
     if policy.tags:
       if snap.tags is None:
-        print(f"WARNING: Snapshot {snap.longname} was created externally and will be kept regardless of keep-tag policy")
+        log.warning(f"Snapshot {snap.longname} was created externally and will be kept regardless of keep-tag policy")
         keep_snap = True
       else:
         for tag in policy.tags:

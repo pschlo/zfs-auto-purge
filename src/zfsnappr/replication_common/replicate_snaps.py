@@ -1,9 +1,13 @@
 from __future__ import annotations
 from typing import Optional, cast
 from collections.abc import Collection
+import logging
 
 from ..zfs import Snapshot, ZfsCli, ZfsProperty, Dataset
 from .send_receive_snap import send_receive_incremental, send_receive_initial
+
+
+log = logging.getLogger(__name__)
 
 
 def holdtag_src(dest_dataset: Dataset):
@@ -24,7 +28,7 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   We call b the base index. It is used as an incremental basis for sending snapshots S[:b]
   """
   if not source_snaps:
-    print(f'No source snapshots given, nothing to do')
+    log.info(f'No source snapshots given, nothing to do')
     return
 
   # sorting is required
@@ -34,7 +38,7 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   dest_exists: bool = any(dest_dataset == d.name for d in dest_cli.get_all_datasets())
   if not dest_exists:
     if initialize:
-      print(f"Creating destination dataset by transferring the oldest snapshot")
+      log.info(f"Creating destination dataset by transferring the oldest snapshot")
       send_receive_initial(
         clis=(source_cli, dest_cli),
         dest_dataset=dest_dataset,
@@ -61,10 +65,10 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
   release_obsolete_holds((source_cli, dest_cli), (source_snaps, dest_snaps), (source_tag, dest_tag))
 
   if base == 0:
-    print(f'Source dataset does not have any new snapshots, nothing to do')
+    log.info(f'Source dataset does not have any new snapshots, nothing to do')
     return
 
-  print(f'Transferring {base} snapshots')
+  log.info(f'Transferring {base} snapshots')
   for i in range(base):
     send_receive_incremental(
       clis=(source_cli, dest_cli),
@@ -74,9 +78,9 @@ def replicate_snaps(source_cli: ZfsCli, source_snaps: Collection[Snapshot], dest
       base=source_snaps[base-i],
       unsafe_release=(i > 0)
     )
-    print(f'{i+1}/{base} transferred')
+    log.info(f'{i+1}/{base} transferred')
   dest_snaps = [s.with_dataset(dest_dataset) for s in source_snaps[:base]] + dest_snaps
-  print(f'Transfer completed')
+  log.info(f'Transfer completed')
 
 
 
@@ -109,14 +113,14 @@ def release_obsolete_holds(clis: tuple[ZfsCli,ZfsCli], snaps: tuple[list[Snapsho
     # no commonly held snap
     newest_common_snap = (-1, -1)
   
-  # print(f"Newest common snap is at indices {newest_common_snap}")
+  log.debug(f"Newest common snap is at indices {newest_common_snap}")
   
   # remove holdtag from all older snaps
   src_release = [s.longname for s in snaps[0][newest_common_snap[0]+1:] if holdtags[0] in src_holds[s.longname]]
   dest_release = [s.longname for s in snaps[1][newest_common_snap[1]+1:] if holdtags[1] in dest_holds[s.longname]]
   if src_release:
-    print(f"Releasing {len(src_release)} obsolete holds in source")
+    log.info(f"Releasing {len(src_release)} obsolete holds in source")
   if dest_release:
-    print(f"Releasing {len(dest_release)} obsolete holds in destination")
+    log.info(f"Releasing {len(dest_release)} obsolete holds in destination")
   clis[0].release(src_release, holdtags[0])
   clis[1].release(dest_release, holdtags[1])

@@ -1,10 +1,14 @@
 from __future__ import annotations
 from argparse import Namespace
 from typing import cast, Optional
+import logging
 
 from ..zfs import LocalZfsCli, RemoteZfsCli
 from ..replication_common import parse_remote, replicate
 from .arguments import Args
+
+
+log = logging.getLogger(__name__)
 
 
 def entrypoint(raw_args: Namespace) -> None:
@@ -15,7 +19,7 @@ def entrypoint(raw_args: Namespace) -> None:
   local_dataset: str = args.dataset
   user, host, remote_dataset = parse_remote(args.remote)
 
-  print(f'Pulling from remote source dataset "{remote_dataset}" to local dest dataset "{local_dataset}"')
+  log.info(f'Pulling from remote source dataset "{remote_dataset}" to local dest dataset "{local_dataset}"')
 
   local_cli = LocalZfsCli()
   remote_cli = RemoteZfsCli(host=host, user=user, port=args.port)

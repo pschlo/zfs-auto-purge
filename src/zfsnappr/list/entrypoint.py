@@ -2,11 +2,14 @@ from __future__ import annotations
 from argparse import Namespace
 from typing import Optional, Callable, cast
 from dataclasses import dataclass
+import logging
 
 from ..zfs import LocalZfsCli, Snapshot, Hold, ZfsProperty
 from .arguments import Args
 from ..filter import filter_snaps, parse_tags
 
+
+log = logging.getLogger(__name__)
 
 COLUMN_SEPARATOR = ' | '
 HEADER_SEPARATOR = '-'
@@ -43,7 +46,7 @@ def entrypoint(raw_args: Namespace) -> None:
   widths: list[int] = [max(len(f.name), *(len(f.get(s)) for s in snaps), 0) for f in fields]
   total_width = (len(COLUMN_SEPARATOR) * ((len(fields) or 1) - 1)) + sum(widths)
 
-  print(COLUMN_SEPARATOR.join(f.name.ljust(w) for f, w in zip(fields, widths)))
-  print((HEADER_SEPARATOR * (total_width//len(HEADER_SEPARATOR) + 1))[:total_width])
+  log.info(COLUMN_SEPARATOR.join(f.name.ljust(w) for f, w in zip(fields, widths)))
+  log.info((HEADER_SEPARATOR * (total_width//len(HEADER_SEPARATOR) + 1))[:total_width])
   for snap in snaps:
-    print(COLUMN_SEPARATOR.join(f.get(snap).ljust(w) for f, w in zip(fields, widths)))
+    log.info(COLUMN_SEPARATOR.join(f.get(snap).ljust(w) for f, w in zip(fields, widths)))

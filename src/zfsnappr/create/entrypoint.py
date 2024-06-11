@@ -3,9 +3,13 @@ from argparse import Namespace
 from typing import Optional, cast
 import random
 import string
+import logging
 
 from ..zfs import LocalZfsCli, ZfsProperty
 from .arguments import Args
+
+
+log = logging.getLogger(__name__)
 
 
 def entrypoint(raw_args: Namespace) -> None:
@@ -31,4 +35,4 @@ def entrypoint(raw_args: Namespace) -> None:
     }
   )
 
-  print(f'Created snapshot {fullname}')
+  log.info(f'Created snapshot {fullname}')

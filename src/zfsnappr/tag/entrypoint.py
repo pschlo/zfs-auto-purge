@@ -1,11 +1,14 @@
 from __future__ import annotations
 from argparse import Namespace
 from typing import Optional, cast, Literal, Callable
+import logging
 
 from ..zfs import LocalZfsCli, ZfsProperty, ZfsCli, Snapshot
 from .. import filter
 from .arguments import Args
 
+
+log = logging.getLogger(__name__)
 
 TAG_SEPARATOR = "_"
 
@@ -41,7 +44,7 @@ def entrypoint(raw_args: Namespace) -> None:
     operations.append((lambda s: get_from_prop(s, p), 'ADD'))
 
   if not operations:
-    print(f"No tag operations specified, nothing to do")
+    log.info(f"No tag operations specified, nothing to do")
     return
   
 
@@ -50,7 +53,7 @@ def entrypoint(raw_args: Namespace) -> None:
   snapshots = cli.get_all_snapshots(args.dataset, recursive=args.recursive, properties=props)
   snapshots = filter.filter_snaps(snapshots, tag=filter.parse_tags(args.tag), shortname=filter.parse_shortnames(args.snapshot))
   if not snapshots:
-    print(f"No snapshots, nothing to do")
+    log.info(f"No snapshots, nothing to do")
     return
 
   # --- apply tag operations ---
