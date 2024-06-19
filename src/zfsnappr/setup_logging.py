@@ -1,9 +1,10 @@
 import logging
 from logging import Formatter
+from typing import Optional
 import sys
 
 
-def setup_logging(root_loglevel: int = logging.INFO, include_packages: set[str]|None = None, others_loglevel: int = logging.WARNING):
+def setup_logging(root_loglevel: int = logging.INFO, include_packages: Optional[set[str]] = None, others_loglevel: int = logging.WARNING):
     """
     - sets log level of the root logger
     - sets log level for logger of other (i.e. not included) packages
